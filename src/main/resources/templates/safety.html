@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>Kỹ Năng & Cảnh Báo - RainAI</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3/lib/anime.min.js"></script>
+  <style>
+    .safety-wrapper {
+        max-width: 1200px; margin: 30px auto; padding: 0 20px;
+    }
+
+    /* 1. ALERT BOX STYLE */
+    .alert-box {
+        padding: 25px; border-radius: 16px; margin-bottom: 40px; display: none;
+        border-left: 8px solid; box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        animation: slideDown 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .alert-warning { background: linear-gradient(to right, #fffbeb, #fff); color: #92400e; border-color: #f59e0b; }
+    .alert-danger { background: linear-gradient(to right, #fef2f2, #fff); color: #b91c1c; border-color: #ef4444; }
+    .alert-safe { background: linear-gradient(to right, #f0fdf4, #fff); color: #166534; border-color: #22c55e; }
+
+    /* 2. TABBED INTERFACE LAYOUT */
+    .handbook-container {
+        display: flex; gap: 30px; min-height: 600px;
+    }
+
+    /* Sidebar Menu */
+    .handbook-sidebar {
+        flex: 0 0 280px;
+        background: white; border-radius: 16px; padding: 20px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.02); height: fit-content;
+    }
+    .tab-btn {
+        display: block; width: 100%; text-align: left;
+        padding: 15px 20px; margin-bottom: 8px; border-radius: 10px;
+        border: none; background: transparent; color: #64748b;
+        font-weight: 600; cursor: pointer; transition: all 0.2s;
+        display: flex; align-items: center; gap: 12px;
+        font-size: 0.95rem;
+    }
+    .tab-btn:hover { background: #f1f5f9; color: #334155; }
+    .tab-btn.active {
+        background: #e0f2fe; color: #0284c7;
+        box-shadow: 0 2px 4px rgba(2, 132, 199, 0.1);
+    }
+    .tab-icon { font-size: 1.2rem; width: 24px; text-align: center; }
+
+    /* Content Area */
+    .handbook-content {
+        flex: 1; background: white; border-radius: 16px; padding: 40px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05); position: relative;
+    }
+    .tab-pane { display: none; animation: fadeIn 0.4s ease-out; }
+    .tab-pane.active { display: block; }
+
+    h2.section-title { color: #1e293b; margin-top: 0; font-size: 1.8rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px; margin-bottom: 20px; }
+    h3.sub-title { color: #334155; margin-top: 25px; margin-bottom: 10px; font-size: 1.2rem; display: flex; align-items: center; gap: 8px;}
+
+    .checklist-item {
+        display: flex; align-items: flex-start; gap: 15px; padding: 12px 0; border-bottom: 1px dashed #e2e8f0;
+        transition: background 0.2s;
+    }
+    .checklist-item:hover { background: #f8fafc; padding-left: 10px; border-radius: 6px; }
+    .checklist-item input[type="checkbox"] {
+        width: 20px; height: 20px; accent-color: #0284c7; cursor: pointer; margin-top: 2px;
+    }
+    .checklist-item label { cursor: pointer; line-height: 1.5; color: #475569; }
+
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
+    .info-card { background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0; }
+    .info-card strong { display: block; margin-bottom: 5px; color: #0f172a; }
+
+    .important-note {
+        background: #fff7ed; border-left: 4px solid #f97316; padding: 15px; margin: 20px 0; border-radius: 4px; color: #9a3412;
+    }
+
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+
+    @media (max-width: 768px) {
+        .handbook-container { flex-direction: column; }
+        .handbook-sidebar { width: 100%; flex: none; display: flex; overflow-x: auto; padding: 10px; gap: 10px; scrollbar-width: none; }
+        .tab-btn { width: auto; white-space: nowrap; margin-bottom: 0; background: #f8fafc; padding: 10px 15px; }
+        .handbook-content { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+<div th:replace="fragments/header :: header"></div>
+
+<main class="safety-wrapper">
+  <div class="page-hero" style="text-align: center; margin-bottom: 40px;">
+    <h1 class="hero-title" style="font-size: 2.5rem;">Cẩm Nang Sinh Tồn 4.0</h1>
+    <p class="hero-desc">Kiến thức chuẩn hóa để ứng phó với thiên tai tại Miền Trung</p>
+  </div>
+
+  <!-- 1. DYNAMIC ALERT (Tự động hiện) -->
+  <div id="dynamicAlert"></div>
+
+  <!-- 2. HANDBOOK CONTENT -->
+  <div class="handbook-container">
+
+    <!-- SIDEBAR MENU -->
+    <div class="handbook-sidebar">
+      <button class="tab-btn active" onclick="switchTab('tab-prep')">
+        <span class="tab-icon">🏠</span> Trước khi bão
+      </button>
+      <button class="tab-btn" onclick="switchTab('tab-during')">
+        <span class="tab-icon">⛈️</span> Trong khi bão
+      </button>
+      <button class="tab-btn" onclick="switchTab('tab-after')">
+        <span class="tab-icon">🧹</span> Sau khi bão
+      </button>
+      <button class="tab-btn" onclick="switchTab('tab-kit')">
+        <span class="tab-icon">🎒</span> Túi khẩn cấp
+      </button>
+      <button class="tab-btn" onclick="switchTab('tab-firstaid')">
+        <span class="tab-icon">🚑</span> Sơ cấp cứu
+      </button>
+      <button class="tab-btn" onclick="switchTab('tab-contact')">
+        <span class="tab-icon">📞</span> Số khẩn cấp
+      </button>
+    </div>
+
+    <!-- CONTENT AREA -->
+    <div class="handbook-content">
+
+      <!-- TAB 1: PREPARATION (TRƯỚC BÃO) -->
+      <div id="tab-prep" class="tab-pane active">
+        <h2 class="section-title">Chuẩn Bị & Gia Cố Nhà Cửa</h2>
+        <p>Thực hiện các bước này ngay khi có tin cảnh báo bão/lũ từ 48-24 giờ trước.</p>
+
+        <h3 class="sub-title">🛡️ Gia cố bên ngoài</h3>
+        <div class="checklist-item">
+          <input type="checkbox" id="p1">
+          <label for="p1"><strong>Mái nhà:</strong> Kiểm tra mái tôn, dùng bao cát hoặc túi nước chèn lên mái để chống tốc mái.</label>
+        </div>
+        <div class="checklist-item">
+          <input type="checkbox" id="p2">
+          <label for="p2"><strong>Cây cối:</strong> Cắt tỉa cành cây lớn quanh nhà để tránh gãy đổ vào đường dây điện hoặc mái nhà.</label>
+        </div>
+        <div class="checklist-item">
+          <input type="checkbox" id="p3">
+          <label for="p3"><strong>Cửa kính:</strong> Dán băng dính hình chữ X lên các cửa kính lớn để giảm nguy cơ vỡ vụn khi có gió giật.</label>
+        </div>
+        <div class="checklist-item">
+          <input type="checkbox" id="p4">
+          <label for="p4"><strong>Thoát nước:</strong> Khơi thông cống rãnh xung quanh nhà giúp nước thoát nhanh hơn.</label>
+        </div>
+
+        <h3 class="sub-title">📦 Dự trữ bên trong</h3>
+        <div class="checklist-item">
+          <input type="checkbox" id="p5">
+          <label for="p5">Dự trữ nước sạch (3 lít/người/ngày) và thực phẩm khô (mì tôm, lương khô) đủ dùng cho 3-5 ngày.</label>
+        </div>
+        <div class="checklist-item">
+          <input type="checkbox" id="p6">
+          <label for="p6">Sạc đầy pin điện thoại, sạc dự phòng, đèn pin.</label>
+        </div>
+        <div class="checklist-item">
+          <input type="checkbox" id="p7">
+          <label for="p7">Kê cao đồ đạc, đặc biệt là thiết bị điện và hóa chất độc hại.</label>
+        </div>
+      </div>
+
+      <!-- TAB 2: DURING STORM (TRONG BÃO) -->
+      <div id="tab-during" class="tab-pane">
+        <h2 class="section-title">Hành Động Khi Bão Đổ Bộ</h2>
+        <div class="important-note">
+          <strong>QUY TẮC VÀNG:</strong> "Ở yên trong nhà kiên cố, tránh xa cửa sổ và cửa ra vào."
+        </div>
+
+        <div class="info-grid">
+          <div class="info-card">
+            <strong>🔌 Điện & Gas</strong>
+            Ngắt cầu dao điện tổng (CB) và khóa van bình gas ngay lập tức nếu nước bắt đầu tràn vào nhà.
+          </div>
+          <div class="info-card">
+            <strong>🚫 Không lội nước</strong>
+            Không lội qua vùng nước ngập nếu nước cao trên đầu gối hoặc chảy xiết. Coi chừng hố ga mất nắp.
+          </div>
+          <div class="info-card">
+            <strong>📱 Thông tin</strong>
+            Luôn bật Radio hoặc theo dõi ứng dụng RainAI để cập nhật diễn biến mưa lũ.
+          </div>
+          <div class="info-card">
+            <strong>🚗 Nếu đang lái xe</strong>
+            Tuyệt đối không cố băng qua ngầm tràn. Đỗ xe vào nơi cao ráo, tránh gốc cây, cột điện.
+          </div>
+        </div>
+
+        <h3 class="sub-title">⚠️ Nếu nhà có nguy cơ sập/ngập sâu:</h3>
+        <ul style="color: #475569; line-height: 1.6;">
+          <li>Bình tĩnh di chuyển sang nhà hàng xóm kiên cố hơn hoặc điểm sơ tán công cộng.</li>
+          <li>Chỉ mang theo <strong>Túi khẩn cấp</strong> và giấy tờ quan trọng.</li>
+          <li>Mặc áo phao hoặc mang theo vật dụng có thể nổi (can nhựa rỗng).</li>
+        </ul>
+      </div>
+
+      <!-- TAB 3: AFTER STORM (SAU BÃO) -->
+      <div id="tab-after" class="tab-pane">
+        <h2 class="section-title">Khắc Phục Hậu Quả Sau Bão</h2>
+        <p>Nguy hiểm vẫn còn ngay cả khi bão đã tan. Hãy cẩn trọng.</p>
+
+        <div class="checklist-item">
+          <input type="checkbox" id="a1">
+          <label for="a1"><strong>Kiểm tra điện:</strong> Không bật điện ngay. Hãy kiểm tra xem hệ thống có bị ngập nước hay rò rỉ không.</label>
+        </div>
+        <div class="checklist-item">
+          <input type="checkbox" id="a2">
+          <label for="a2"><strong>Vệ sinh:</strong> Dọn dẹp xác động vật chết, rác thải để phòng dịch bệnh. Sử dụng vôi bột hoặc Cloramin B.</label>
+        </div>
+        <div class="checklist-item">
+          <input type="checkbox" id="a3">
+          <label for="a3"><strong>Nước uống:</strong> Tuyệt đối ăn chín uống sôi. Khử trùng nước bằng viên lọc nước nếu nguồn nước bị ô nhiễm.</label>
+        </div>
+        <div class="checklist-item">
+          <input type="checkbox" id="a4">
+          <label for="a4"><strong>Kiểm tra nhà:</strong> Chụp ảnh hư hại (nếu có) để làm thủ tục bảo hiểm hoặc xin hỗ trợ.</label>
+        </div>
+      </div>
+
+      <!-- TAB 4: EMERGENCY KIT (TÚI KHẨN CẤP) -->
+      <div id="tab-kit" class="tab-pane">
+        <h2 class="section-title">Túi Cứu Hộ (Go-Bag)</h2>
+        <p>Hãy chuẩn bị sẵn một balo chống nước chứa các vật dụng sau cho 72 giờ sinh tồn.</p>
+
+        <h3 class="sub-title">💧 Nhu yếu phẩm</h3>
+        <ul class="checklist-style">
+          <li>Nước uống: 3-5 chai 1.5 lít.</li>
+          <li>Thực phẩm: Lương khô, mì tôm, đồ hộp (kèm đồ khui), sô-cô-la (năng lượng cao).</li>
+        </ul>
+
+        <h3 class="sub-title">💊 Y tế & Vệ sinh</h3>
+        <ul class="checklist-style">
+          <li>Bông băng, gạc, thuốc sát trùng (Povidine).</li>
+          <li>Thuốc hạ sốt, thuốc tiêu hóa, thuốc dị ứng.</li>
+          <li>Khẩu trang, nước rửa tay khô.</li>
+          <li>Băng vệ sinh (dùng cho phụ nữ hoặc cầm máu vết thương lớn).</li>
+        </ul>
+
+        <h3 class="sub-title">🔦 Dụng cụ sinh tồn</h3>
+        <ul class="checklist-style">
+          <li>Đèn pin (loại siêu sáng) + Pin dự phòng.</li>
+          <li>Còi cứu hộ (để báo hiệu khi bị kẹt).</li>
+          <li>Bật lửa, dao đa năng.</li>
+          <li>Áo mưa bộ, chăn mỏng.</li>
+          <li><strong>Giấy tờ:</strong> CCCD, Sổ đỏ (bản sao), tiền mặt (bọc trong túi zip chống nước).</li>
+        </ul>
+      </div>
+
+      <!-- TAB 5: FIRST AID (SƠ CẤP CỨU) -->
+      <div id="tab-firstaid" class="tab-pane">
+        <h2 class="section-title">Kỹ Năng Sơ Cấp Cứu Cơ Bản</h2>
+
+        <div class="info-card" style="margin-bottom: 15px; border-left: 4px solid #ef4444;">
+          <h3 style="margin-top:0; color:#b91c1c;">🚑 Đuối nước</h3>
+          <ol style="padding-left: 20px;">
+            <li>Đưa nạn nhân ra khỏi nước nhanh chóng.</li>
+            <li>Kiểm tra hơi thở. Nếu ngừng thở, thực hiện <strong>ép tim lồng ngực (CPR)</strong> ngay lập tức.</li>
+            <li>Hà hơi thổi ngạt kết hợp ép tim theo tỷ lệ 30 lần ép : 2 lần thổi.</li>
+            <li>Giữ ấm cơ thể, thay quần áo khô.</li>
+          </ol>
+        </div>
+
+        <div class="info-card" style="margin-bottom: 15px; border-left: 4px solid #f59e0b;">
+          <h3 style="margin-top:0; color:#92400e;">⚡ Điện giật</h3>
+          <ol style="padding-left: 20px;">
+            <li><strong>Tuyệt đối không chạm trực tiếp</strong> vào nạn nhân khi nguồn điện chưa ngắt.</li>
+            <li>Ngắt cầu dao hoặc dùng vật cách điện (gậy gỗ khô, nhựa) gạt dây điện ra.</li>
+            <li>Kiểm tra nhịp tim, hô hấp và sơ cứu như đuối nước nếu cần.</li>
+          </ol>
+        </div>
+
+        <div class="info-card" style="margin-bottom: 15px; border-left: 4px solid #3b82f6;">
+          <h3 style="margin-top:0; color:#1e40af;">🩸 Vết thương chảy máu</h3>
+          <ol style="padding-left: 20px;">
+            <li>Rửa sạch vết thương bằng nước sạch hoặc nước muối.</li>
+            <li>Dùng vải sạch hoặc băng gạc ép chặt lên vết thương để cầm máu.</li>
+            <li>Kê cao phần bị thương cao hơn tim (nếu có thể).</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- TAB 6: CONTACT (LIÊN LẠC) -->
+      <div id="tab-contact" class="tab-pane">
+        <h2 class="section-title">Danh Bạ Khẩn Cấp</h2>
+        <p>Hãy lưu các số này vào điện thoại ngay bây giờ.</p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          <div style="background: #fee2e2; padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #fecaca;">
+            <div style="font-size: 2.5rem; font-weight: 800; color: #dc2626;">114</div>
+            <div style="font-weight: bold; color: #991b1b;">CỨU HỎA & CỨU NẠN</div>
+            <div style="font-size: 0.85rem; margin-top: 5px;">Gọi khi ngập lụt, sập nhà, mắc kẹt</div>
+          </div>
+
+          <div style="background: #dcfce7; padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #bbf7d0;">
+            <div style="font-size: 2.5rem; font-weight: 800; color: #16a34a;">115</div>
+            <div style="font-weight: bold; color: #166534;">CẤP CỨU Y TẾ</div>
+            <div style="font-size: 0.85rem; margin-top: 5px;">Gọi khi có người bị thương</div>
+          </div>
+
+          <div style="background: #e0f2fe; padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #bae6fd;">
+            <div style="font-size: 2.5rem; font-weight: 800; color: #0284c7;">112</div>
+            <div style="font-weight: bold; color: #075985;">TÌM KIẾM CỨU NẠN</div>
+            <div style="font-size: 0.85rem; margin-top: 5px;">Phạm vi toàn quốc</div>
+          </div>
+
+          <div style="background: #f1f5f9; padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #cbd5e1;">
+            <div style="font-size: 2.5rem; font-weight: 800; color: #475569;">1900...</div>
+            <div style="font-weight: bold; color: #334155;">ĐIỆN LỰC</div>
+            <div style="font-size: 0.85rem; margin-top: 5px;">Báo sự cố mất điện/rò điện</div>
+          </div>
+        </div>
+
+        <div class="important-note" style="margin-top: 30px; background: #f0f9ff; border-left-color: #0ea5e9; color: #0369a1;">
+          <strong>Mẹo nhỏ:</strong> Hãy viết số điện thoại của người thân và bỏ vào túi nilon trong túi khẩn cấp. Phòng khi điện thoại hết pin hoặc bị hỏng do nước.
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script>
+  // Tab Switching Logic
+  function switchTab(tabId) {
+      // Remove active class from all buttons and panes
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+
+      // Add active to clicked button and target pane
+      event.currentTarget.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+  }
+
+  // Dynamic Alert Logic
+  document.addEventListener("DOMContentLoaded", function() {
+      const lastPred = JSON.parse(localStorage.getItem('lastPrediction'));
+      const alertDiv = document.getElementById('dynamicAlert');
+
+      if (lastPred) {
+          const rain = lastPred.rain;
+          const location = lastPred.location || 'khu vực của bạn';
+          const timeDiff = (new Date() - new Date(lastPred.timestamp)) / 1000 / 60; // minutes
+
+          // Show alert if prediction was within last 30 mins
+          if (timeDiff < 30) {
+              let html = '';
+              if (rain > 100) {
+                  html = `
+                      <div class="alert-box alert-danger" style="display:block">
+                          <h3 style="margin-top:0; font-size:1.4rem;">🚨 BÁO ĐỘNG ĐỎ TẠI ${location.toUpperCase()}</h3>
+                          <p style="font-size: 1.1rem; margin: 10px 0;">Dự báo mưa cực lớn (${rain.toFixed(1)}mm). Nguy cơ ngập lụt diện rộng.</p>
+                          <div style="font-weight: 700; background: rgba(255,255,255,0.5); padding: 10px; border-radius: 8px;">
+                              KHUYẾN NGHỊ: Xem ngay mục "Túi khẩn cấp" và "Sơ cấp cứu".
+                          </div>
+                      </div>
+                  `;
+                  // Auto switch to Kit tab
+                  switchTab('tab-kit');
+                  document.querySelectorAll('.tab-btn')[3].classList.add('active'); // Highlight Kit button
+                  document.querySelectorAll('.tab-btn')[0].classList.remove('active'); // Remove default
+              } else if (rain > 50) {
+                  html = `
+                      <div class="alert-box alert-warning" style="display:block">
+                          <h3 style="margin-top:0; font-size:1.4rem;">⚠️ CẢNH BÁO MƯA LỚN</h3>
+                          <p style="font-size: 1.1rem;">Khu vực ${location} sắp có mưa to (${rain.toFixed(1)}mm).</p>
+                          <p>Hãy kiểm tra mái nhà (Tab "Trước khi bão") ngay.</p>
+                      </div>
+                  `;
+              }
+              if(html) alertDiv.innerHTML = html;
+          }
+      }
+  });
+</script>
+</body>
+</html>

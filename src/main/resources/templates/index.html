@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dự báo mưa Miền Trung - AI Forecast</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <!-- Thư viện SweetAlert2 cho Popup đẹp -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/animejs@3/lib/anime.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<!-- Header dùng cú pháp mới -->
+<div th:replace="~{fragments/header :: header}"></div>
+
+<main class="app-container">
+    <div class="page-hero">
+        <h1 class="hero-title">Dự Báo Lượng Mưa AI</h1>
+        <p class="hero-desc">Sử dụng Machine Learning & Dữ liệu vệ tinh LST</p>
+
+        <!-- [ĐÃ SỬA] NÚT ĐĂNG KÝ NHẬN TIN - Dùng class btn-hero-action -->
+        <button onclick="openSubscribeModal()" class="btn-hero-action">
+            <span>🔔</span> Đăng ký nhận cảnh báo qua Email
+        </button>
+    </div>
+
+    <div class="split-layout">
+        <!-- KHỐI TRÁI: FORM NHẬP LIỆU -->
+        <div class="modern-card">
+            <h2 style="font-size: 1.25rem; margin-bottom: 1.5rem; color: #1e293b;">⚡ Dữ liệu đầu vào</h2>
+
+            <form id="predictForm">
+                <div class="form-group">
+                    <label class="lbl">Khu vực dự báo</label>
+                    <div style="position: relative;">
+                        <select id="locationId" name="locationId" class="inp" required>
+                            <option value="" disabled selected>-- Chọn Tỉnh/Thành phố --</option>
+                            <option th:each="loc : ${locations}" th:value="${loc.id}" th:text="${loc.name}"></option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label class="lbl">Nhiệt độ (LST)</label>
+                        <input type="number" id="lst" class="inp" step="any" placeholder="°C" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="lbl">Độ ẩm (%)</label>
+                        <input type="number" id="humidity" class="inp" step="any" placeholder="%" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="lbl">Nhiệt độ KK</label>
+                        <input type="number" id="temperature" class="inp" step="any" placeholder="°C" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="lbl">Tốc độ gió</label>
+                        <input type="number" id="windSpeed" class="inp" step="any" placeholder="m/s" required>
+                    </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem;">
+                    <button type="button" class="btn-modern btn-secondary" id="autoFillBtn">
+                        📡 Lấy dữ liệu thời tiết hiện tại
+                    </button>
+                    <button type="submit" class="btn-modern btn-primary" id="predictBtn">
+                        🔮 Dự báo ngay
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- KHỐI PHẢI: KẾT QUẢ -->
+        <div style="height: 100%;">
+            <div id="emptyState" class="modern-card" style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; opacity: 0.7;">
+                <img src="https://cdn-icons-png.flaticon.com/512/1163/1163624.png" width="100" style="margin-bottom: 1rem; opacity: 0.5;" alt="Cloud">
+                <h3 style="color: var(--text-gray);">Chưa có dữ liệu</h3>
+                <p>Nhập thông số bên trái để bắt đầu mô phỏng</p>
+            </div>
+
+            <div id="resultContainer" style="height: 100%; display: none;">
+                <div id="weatherWindow" class="weather-window weather-clear">
+                    <div class="weather-content">
+                        <div style="font-size: 0.9rem; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 0.5rem;">Dự báo lượng mưa</div>
+                        <div class="big-temp">
+                            <span id="rainfallValue">0</span><span style="font-size: 2rem; vertical-align: top;">mm</span>
+                        </div>
+                        <div id="weatherStatus" class="weather-status">Đang xử lý...</div>
+                        <div id="weatherSub" class="weather-sub">...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+<script src="/js/dashboard.js"></script>
+
+<!-- SCRIPT XỬ LÝ ĐĂNG KÝ EMAIL -->
+<script>
+    async function openSubscribeModal() {
+        const optionsHtml = document.getElementById('locationId').innerHTML;
+
+        const { value: formValues } = await Swal.fire({
+            title: '📡 Đăng ký cảnh báo sớm',
+            html: `
+                <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 15px;">Hệ thống sẽ gửi Email cho bạn khi dự báo có mưa lớn (>50mm) tại khu vực bạn chọn.</p>
+                <input id="swal-email" class="swal2-input" placeholder="Nhập Email của bạn" type="email">
+                <select id="swal-loc" class="swal2-select" style="width: 80%; margin-top: 15px;">
+                    ${optionsHtml}
+                </select>
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'Đăng Ký Ngay',
+            cancelButtonText: 'Hủy',
+            confirmButtonColor: '#0ea5e9',
+            preConfirm: () => {
+                const email = document.getElementById('swal-email').value;
+                const locId = document.getElementById('swal-loc').value;
+
+                if (!email || !email.includes('@')) {
+                    Swal.showValidationMessage('Vui lòng nhập Email hợp lệ');
+                    return false;
+                }
+                if (!locId) {
+                    Swal.showValidationMessage('Vui lòng chọn khu vực');
+                    return false;
+                }
+                return { email: email, locId: locId }
+            }
+        });
+
+        if (formValues) {
+            try {
+                const formData = new FormData();
+                formData.append('email', formValues.email);
+                formData.append('locationId', formValues.locId);
+
+                Swal.showLoading();
+
+                const res = await fetch('/api/notify/subscribe', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (res.ok) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Đăng ký thành công!',
+                        text: 'Bạn sẽ nhận được email cảnh báo khi trời mưa to.',
+                        timer: 3000
+                    });
+                } else {
+                    const errData = await res.json();
+                    Swal.fire('Lỗi', errData.error || 'Có lỗi xảy ra', 'error');
+                }
+            } catch (e) {
+                console.error(e);
+                Swal.fire('Lỗi kết nối', 'Không thể kết nối đến máy chủ', 'error');
+            }
+        }
+    }
+</script>
+</body>
+</html>

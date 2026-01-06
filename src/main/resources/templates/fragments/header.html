@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+<header th:fragment="header" class="glass-header">
+    <div class="nav-wrapper">
+        <a href="/" class="logo-brand">
+            <!-- Icon SVG màu trắng -->
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4.1 9.9c.7 1.3 2 2.1 3.9 2.1s3-.8 4-2c1 1.2 2 2 4 2s3.2-.8 3.9-2.1"></path>
+                <path d="M4 14c.7 1.3 2 2.1 3.9 2.1s3-.8 4-2c1 1.2 2 2 4 2s3.2-.8 3.9-2.1"></path>
+            </svg>
+            <span>RainAI System</span>
+        </a>
+        <nav class="nav-menu">
+            <a href="/" class="nav-link" th:classappend="${currentUri == '/' ? 'active' : ''}">Trang chủ</a>
+
+            <a href="/map" class="nav-link" th:classappend="${currentUri == '/map' ? 'active' : ''}">Bản đồ</a>
+            <a href="/history" class="nav-link" th:classappend="${currentUri == '/history' ? 'active' : ''}">Lịch sử</a>
+
+            <!-- HAI MENU MỚI -->
+            <a href="/methodology" class="nav-link" th:classappend="${currentUri == '/methodology' ? 'active' : ''}">Mô hình</a>
+            <a href="/safety" class="nav-link" th:classappend="${currentUri == '/safety' ? 'active' : ''}">Kỹ năng</a>
+
+            <a href="/admin" class="nav-link" th:classappend="${currentUri != null && currentUri.startsWith('/admin') ? 'active' : ''}" sec:authorize="hasRole('ADMIN')">Admin</a>
+        </nav>
+    </div>
+</header>
+</body>
+</html>

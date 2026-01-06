@@ -1,0 +1,108 @@
+2025-12-20 17:34:22,253 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.2.8:5000
+2025-12-20 17:34:22,254 - INFO - [33mPress CTRL+C to quit[0m
+2025-12-20 17:34:22,256 - INFO -  * Restarting with stat
+2025-12-20 17:34:23,849 - WARNING -  * Debugger is active!
+2025-12-20 17:34:23,854 - INFO -  * Debugger PIN: 118-575-813
+2025-12-20 17:37:50,863 - INFO -  * Detected change in 'C:\\Users\\ACER\\Desktop\\KLTN\\rain-forecast-web\\python_service\\app.py', reloading
+2025-12-20 17:37:51,026 - INFO -  * Restarting with stat
+2025-12-20 17:37:52,732 - INFO - ✅ Load model thành công từ: random_forest_model.pkl
+2025-12-20 17:37:52,733 - INFO - 🚀 Khởi động Python ML Service trên port 5000...
+2025-12-20 17:37:52,740 - WARNING -  * Debugger is active!
+2025-12-20 17:37:52,743 - INFO -  * Debugger PIN: 118-575-813
+2025-12-20 17:40:16,049 - INFO - ✅ Load model thành công từ: random_forest_model.pkl
+2025-12-20 17:40:16,050 - INFO - 🚀 Khởi động Python ML Service trên port 5000...
+2025-12-20 17:40:16,065 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.2.8:5000
+2025-12-20 17:40:16,066 - INFO - [33mPress CTRL+C to quit[0m
+2025-12-20 17:40:16,068 - INFO -  * Restarting with stat
+2025-12-20 17:40:17,614 - INFO - ✅ Load model thành công từ: random_forest_model.pkl
+2025-12-20 17:40:17,615 - INFO - 🚀 Khởi động Python ML Service trên port 5000...
+2025-12-20 17:40:17,622 - WARNING -  * Debugger is active!
+2025-12-20 17:40:17,625 - INFO -  * Debugger PIN: 118-575-813
+2025-12-20 17:40:44,018 - INFO - 127.0.0.1 - - [20/Dec/2025 17:40:44] "[33mGET / HTTP/1.1[0m" 404 -
+2025-12-20 17:40:44,073 - INFO - 127.0.0.1 - - [20/Dec/2025 17:40:44] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-12-20 17:41:24,614 - INFO - 📩 Nhận request: {'location_name': 'Gia Lai (Gộp - Quy Nhơn)', 'lst': 25.4, 'humidity': 91.0, 'temperature': 23.43, 'wind_speed': 1.27, 'wind_unit': 'kmh'}
+2025-12-20 17:41:24,631 - INFO - 📊 Dữ liệu đưa vào model:
+    lst  humidity  temperature  wind_speed
+0  25.4      91.0        23.43        1.27
+2025-12-20 17:41:24,632 - ERROR - ❌ Lỗi xử lý: The feature names should match those that were passed during fit.
+Feature names seen at fit time, yet now missing:
+- day_cos
+- day_sin
+- dew_point
+- humid_mean_3d
+- lat
+- ...
+Traceback (most recent call last):
+  File "C:\Users\ACER\Desktop\KLTN\rain-forecast-web\python_service\app.py", line 93, in predict
+    prediction = model.predict(features)
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ACER\AppData\Local\Programs\Python\Python312\Lib\site-packages\sklearn\ensemble\_forest.py", line 984, in predict
+    X = self._validate_X_predict(X)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ACER\AppData\Local\Programs\Python\Python312\Lib\site-packages\sklearn\ensemble\_forest.py", line 599, in _validate_X_predict
+    X = self._validate_data(X, dtype=DTYPE, accept_sparse="csr", reset=False)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ACER\AppData\Local\Programs\Python\Python312\Lib\site-packages\sklearn\base.py", line 580, in _validate_data
+    self._check_feature_names(X, reset=reset)
+  File "C:\Users\ACER\AppData\Local\Programs\Python\Python312\Lib\site-packages\sklearn\base.py", line 507, in _check_feature_names
+    raise ValueError(message)
+ValueError: The feature names should match those that were passed during fit.
+Feature names seen at fit time, yet now missing:
+- day_cos
+- day_sin
+- dew_point
+- humid_mean_3d
+- lat
+- ...
+
+2025-12-20 17:41:24,690 - INFO - 127.0.0.1 - - [20/Dec/2025 17:41:24] "[35m[1mPOST /predict HTTP/1.1[0m" 500 -
+2025-12-20 17:41:28,269 - INFO - 📩 Nhận request: {'location_name': 'Gia Lai (Gộp - Quy Nhơn)', 'lst': 25.4, 'humidity': 91.0, 'temperature': 23.43, 'wind_speed': 1.27, 'wind_unit': 'kmh'}
+2025-12-20 17:41:28,283 - INFO - 📊 Dữ liệu đưa vào model:
+    lst  humidity  temperature  wind_speed
+0  25.4      91.0        23.43        1.27
+2025-12-20 17:41:28,284 - ERROR - ❌ Lỗi xử lý: The feature names should match those that were passed during fit.
+Feature names seen at fit time, yet now missing:
+- day_cos
+- day_sin
+- dew_point
+- humid_mean_3d
+- lat
+- ...
+Traceback (most recent call last):
+  File "C:\Users\ACER\Desktop\KLTN\rain-forecast-web\python_service\app.py", line 93, in predict
+    prediction = model.predict(features)
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ACER\AppData\Local\Programs\Python\Python312\Lib\site-packages\sklearn\ensemble\_forest.py", line 984, in predict
+    X = self._validate_X_predict(X)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ACER\AppData\Local\Programs\Python\Python312\Lib\site-packages\sklearn\ensemble\_forest.py", line 599, in _validate_X_predict
+    X = self._validate_data(X, dtype=DTYPE, accept_sparse="csr", reset=False)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ACER\AppData\Local\Programs\Python\Python312\Lib\site-packages\sklearn\base.py", line 580, in _validate_data
+    self._check_feature_names(X, reset=reset)
+  File "C:\Users\ACER\AppData\Local\Programs\Python\Python312\Lib\site-packages\sklearn\base.py", line 507, in _check_feature_names
+    raise ValueError(message)
+ValueError: The feature names should match those that were passed during fit.
+Feature names seen at fit time, yet now missing:
+- day_cos
+- day_sin
+- dew_point
+- humid_mean_3d
+- lat
+- ...
+
+2025-12-20 17:41:28,287 - INFO - 127.0.0.1 - - [20/Dec/2025 17:41:28] "[35m[1mPOST /predict HTTP/1.1[0m" 500 -
+2025-12-20 17:46:41,612 - INFO -  * Detected change in 'C:\\Users\\ACER\\Desktop\\KLTN\\rain-forecast-web\\python_service\\train_model.py', reloading
+2025-12-20 17:46:41,853 - INFO -  * Restarting with stat
+2025-12-20 17:46:43,486 - INFO - ✅ Load model thành công từ: random_forest_model.pkl
+2025-12-20 17:46:43,486 - INFO - 🚀 Khởi động Python ML Service trên port 5000...
+2025-12-20 17:46:43,500 - WARNING -  * Debugger is active!
+2025-12-20 17:46:43,504 - INFO -  * Debugger PIN: 118-575-813
+2025-12-20 17:46:53,818 - INFO -  * Detected change in 'C:\\Users\\ACER\\Desktop\\KLTN\\rain-forecast-web\\python_service\\app.py', reloading
+2025-12-20 17:46:54,071 - INFO -  * Restarting with stat

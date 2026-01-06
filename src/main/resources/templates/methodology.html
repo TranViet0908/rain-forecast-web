@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Khoa Học & Mô Hình - RainAI</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/animejs@3/lib/anime.min.js"></script>
+    <style>
+        .method-container {
+            max-width: 1000px; margin: 40px auto; padding: 0 20px;
+        }
+        .tech-card {
+            background: rgba(255,255,255,0.9); border-radius: 16px; padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1); margin-bottom: 30px;
+        }
+        .tech-header {
+            font-size: 1.5rem; font-weight: 700; color: #1e293b; margin-bottom: 20px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .metric-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;
+        }
+        .metric-box {
+            background: #f8fafc; padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #e2e8f0;
+        }
+        .metric-val { font-size: 2rem; font-weight: 800; color: #0284c7; }
+        .metric-lbl { color: #64748b; font-size: 0.9rem; text-transform: uppercase; margin-top: 5px; }
+    </style>
+</head>
+<body>
+<div th:replace="fragments/header :: header"></div>
+
+<main class="method-container">
+    <div class="page-hero" style="padding: 40px 0; margin-bottom: 20px;">
+        <h1 class="hero-title">Công Nghệ Lõi</h1>
+        <p class="hero-desc">Sự kết hợp giữa Dữ liệu vệ tinh (LST) và Machine Learning (Random Forest)</p>
+    </div>
+
+    <!-- 1. HIỆU SUẤT MÔ HÌNH -->
+    <div class="tech-card">
+        <div class="tech-header">🚀 Hiệu Suất Mô Hình (Real-time)</div>
+        <div class="metric-grid" th:if="${modelInfo != null}">
+            <div class="metric-box">
+                <div class="metric-val" th:text="${modelInfo.metrics['accuracy_gatekeeper']} + '%'">0%</div>
+                <div class="metric-lbl">Độ chính xác phân loại (Mưa/Không)</div>
+            </div>
+            <div class="metric-box">
+                <div class="metric-val" th:text="${modelInfo.metrics['r2_score_specialist']}">0.0</div>
+                <div class="metric-lbl">R2 Score (Độ khớp lượng mưa)</div>
+            </div>
+            <div class="metric-box">
+                <div class="metric-val">15,000+</div>
+                <div class="metric-lbl">Mẫu dữ liệu huấn luyện (1984-2024)</div>
+            </div>
+        </div>
+        <div th:unless="${modelInfo != null}" style="text-align: center; color: red;">
+            Không thể kết nối tới Model Python Server.
+        </div>
+    </div>
+
+    <!-- 2. BIỂU ĐỒ FEATURE IMPORTANCE -->
+    <div class="tech-card">
+        <div class="tech-header">📊 Yếu Tố Ảnh Hưởng Nhất</div>
+        <p style="color: #64748b; margin-bottom: 20px;">
+            Biểu đồ dưới đây cho thấy AI "coi trọng" yếu tố nào nhất khi đưa ra quyết định dự báo mưa.
+            Dữ liệu được trích xuất trực tiếp từ cấu trúc cây quyết định của mô hình.
+        </p>
+        <div style="height: 400px; position: relative;">
+            <canvas id="featureChart"></canvas>
+        </div>
+    </div>
+
+    <!-- 3. GIẢI THÍCH LST -->
+    <div class="tech-card">
+        <div class="tech-header">🛰️ Land Surface Temperature (LST) là gì?</div>
+        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 300px;">
+                <p><strong>Nhiệt độ bề mặt đất (LST)</strong> khác với nhiệt độ không khí mà chúng ta cảm nhận. Nó là nhiệt độ lớp ngoài cùng của trái đất, được đo bằng cảm biến hồng ngoại từ vệ tinh.</p>
+                <p>Trong dự án này, LST đóng vai trò quan trọng vì:</p>
+                <ul style="margin-left: 20px; line-height: 1.6; color: #475569;">
+                    <li>Giúp phát hiện sự bốc hơi nước từ mặt đất (nguyên liệu tạo mây).</li>
+                    <li>Tương quan chặt chẽ với độ ẩm đất trước khi mưa.</li>
+                    <li>Cung cấp dữ liệu chi tiết hơn so với các trạm khí tượng thưa thớt.</li>
+                </ul>
+            </div>
+            <div style="flex: 1; min-width: 300px; background: #e2e8f0; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                <!-- Placeholder ảnh LST -->
+                <div style="text-align: center; padding: 20px;">
+                    <div style="font-size: 3rem;">🛰️ 📡</div>
+                    <div style="margin-top: 10px; color: #64748b;">Mô phỏng dữ liệu vệ tinh</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    document.addEventListener("DOMContentLoaded", function() {
+        const modelInfo = /*[[${modelInfo}]]*/ null;
+
+        if (modelInfo && modelInfo.feature_importance) {
+            const ctx = document.getElementById('featureChart');
+            const labels = modelInfo.feature_importance.slice(0, 10).map(f => f.name); // Top 10
+            const data = modelInfo.feature_importance.slice(0, 10).map(f => f.score);
+
+            // Mapping tên cho đẹp
+            const nameMap = {
+                'lst': 'Nhiệt độ bề mặt (LST)',
+                'humidity': 'Độ ẩm',
+                'rain_lag_1': 'Mưa hôm qua',
+                'rain_mean_3d': 'TB Mưa 3 ngày',
+                'dew_point': 'Điểm sương',
+                'temperature': 'Nhiệt độ KK',
+                'wind_speed': 'Tốc độ gió',
+                'heat_index': 'Chỉ số nhiệt',
+                'lat': 'Vĩ độ', 'lon': 'Kinh độ'
+            };
+            const niceLabels = labels.map(l => nameMap[l] || l);
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: niceLabels,
+                    datasets: [{
+                        label: 'Mức độ ảnh hưởng (%)',
+                        data: data.map(x => (x * 100).toFixed(2)),
+                        backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                        borderColor: 'rgb(59, 130, 246)',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', // Biểu đồ ngang
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { beginAtZero: true } }
+                }
+            });
+        }
+
+        // Animation
+        anime({
+            targets: '.tech-card',
+            translateY: [20, 0], opacity: [0, 1],
+            delay: anime.stagger(100), easing: 'easeOutQuad'
+        });
+    });
+    /*]]>*/
+</script>
+</body>
+</html>

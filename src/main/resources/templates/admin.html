@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Console - RainAI</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/animejs@3/lib/anime.min.js"></script>
+</head>
+<body>
+<!-- 1. Sửa Header -->
+<div th:replace="~{fragments/header :: header}"></div>
+
+<main class="app-container">
+    <div class="page-hero" style="text-align: left; border-bottom: 1px solid #e2e8f0; padding-bottom: 1.5rem;">
+        <h1 class="hero-title">Quản Trị Hệ Thống</h1>
+        <p class="hero-desc">Xác thực dữ liệu thực tế để huấn luyện lại mô hình</p>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-header">Cần xử lý</div>
+            <div class="stat-number" style="color: #f59e0b;" th:text="${pendingCount}">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-header">Đã xác nhận (24h)</div>
+            <div class="stat-number" style="color: #10b981;" th:text="${confirmedCount}">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-header">Sai số trung bình</div>
+            <div class="stat-number" style="color: #3b82f6;" th:text="${avgError}">0.0</div>
+        </div>
+    </div>
+
+    <section class="modern-card" style="padding: 0; overflow: hidden;">
+        <div style="padding: 1.5rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+            <h3 style="font-size: 1.1rem; color: #0f172a; margin: 0;">📋 Danh sách chờ nhập liệu</h3>
+        </div>
+
+        <div class="table-responsive">
+            <table class="fancy-table">
+                <thead>
+                <tr>
+                    <th>Thời gian</th>
+                    <th>Trạm</th>
+                    <th>Input (LST/H/T/W)</th>
+                    <th>Dự báo</th>
+                    <th>Tác vụ</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="item : ${pendingList}">
+                    <td th:text="${#temporals.format(item.predictionTimestamp, 'dd/MM HH:mm')}"></td>
+                    <td th:text="${item.location.name}" style="font-weight: 600;"></td>
+
+                    <td style="font-size: 0.9rem; color: #64748b; font-family: monospace;">
+                        <span th:text="${item.predictionFeature.inputLst}"></span> /
+                        <span th:text="${item.predictionFeature.inputHumidity}"></span> /
+                        <span th:text="${item.predictionFeature.inputTemp}"></span> /
+                        <span th:text="${item.predictionFeature.inputWindSpeed}"></span>
+                    </td>
+
+                    <td th:text="${#numbers.formatDecimal(item.predictedRainfall, 1, 1) + ' mm'}"
+                        style="color: #2563eb; font-weight: 700;"></td>
+
+                    <td>
+                        <button type="button" class="btn-modern btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.8rem;"
+                                th:onclick="'openModal(' + ${item.id} + ',' + ${item.predictedRainfall} + ')'">
+                            Update
+                        </button>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(pendingList)}">
+                    <td colspan="5" style="text-align: center; padding: 4rem;">
+                        <div style="font-size: 3rem; margin-bottom: 0.5rem;">🎉</div>
+                        <div style="color: #64748b;">Tất cả dữ liệu đã được đồng bộ</div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<div id="dataModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(5px); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="modern-card" style="width: 400px; max-width: 90%; margin: 0; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+        <h3 style="margin-bottom: 1.5rem; font-size: 1.25rem;">Cập nhật thực tế</h3>
+
+        <form id="dataForm">
+            <input type="hidden" id="recordId" value="">
+
+            <div class="form-group">
+                <label class="lbl">Giá trị dự báo</label>
+                <input type="text" id="forecastValue" disabled class="inp" style="background: #e2e8f0; color: #64748b;">
+            </div>
+
+            <div class="form-group">
+                <label for="actualValue" class="lbl">Giá trị thực tế (mm)</label>
+                <input type="number" id="actualValue" step="0.1" class="inp" placeholder="Nhập số liệu đo đạc..." required autofocus>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button type="button" class="btn-modern btn-secondary" style="flex: 1;" onclick="closeModal()">Hủy bỏ</button>
+                <button type="submit" class="btn-modern btn-primary" style="flex: 1;">Lưu dữ liệu</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 2. Sửa Footer -->
+<div th:replace="~{fragments/footer :: footer}"></div>
+
+<script>
+    function openModal(id, forecast) {
+      document.getElementById('recordId').value = id;
+      document.getElementById('forecastValue').value = forecast.toFixed(1) + ' mm';
+      document.getElementById('actualValue').value = '';
+
+      const modal = document.getElementById('dataModal');
+      modal.style.display = 'flex';
+
+      // Animation
+      anime({
+          targets: modal.querySelector('.modern-card'),
+          scale: [0.9, 1],
+          opacity: [0, 1],
+          duration: 300,
+          easing: 'easeOutExpo'
+      });
+
+      document.getElementById('actualValue').focus();
+    }
+
+    function closeModal() {
+      document.getElementById('dataModal').style.display = 'none';
+    }
+
+    document.getElementById('dataForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const recordId = document.getElementById('recordId').value;
+      const actualValue = parseFloat(document.getElementById('actualValue').value);
+
+      try {
+        const response = await fetch('/admin/update-actual', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({id: parseInt(recordId), actual_rainfall: actualValue})
+        });
+
+        if (response.ok) {
+            closeModal();
+            Swal.fire({
+              icon: 'success',
+              title: 'Đã lưu',
+              toast: true, position: 'top-end', showConfirmButton: false, timer: 1500
+            });
+            setTimeout(() => window.location.reload(), 1000);
+        } else throw new Error('Failed');
+
+      } catch (error) {
+        Swal.fire({icon: 'error', title: 'Lỗi', text: 'Không thể cập nhật dữ liệu'});
+      }
+    });
+
+    document.getElementById('dataModal').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('dataModal')) closeModal();
+    });
+</script>
+</body>
+</html>
