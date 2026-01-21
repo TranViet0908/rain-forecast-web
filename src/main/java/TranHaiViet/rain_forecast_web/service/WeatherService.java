@@ -10,9 +10,14 @@ import TranHaiViet.rain_forecast_web.entity.PredictionHistory;
 import TranHaiViet.rain_forecast_web.repository.LocationRepository;
 import TranHaiViet.rain_forecast_web.repository.PredictionFeatureRepository;
 import TranHaiViet.rain_forecast_web.repository.PredictionHistoryRepository;
+import TranHaiViet.rain_forecast_web.repository.SubscriberRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -23,6 +28,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -33,7 +39,9 @@ public class WeatherService {
     private final LocationRepository locationRepository;
     private final PredictionHistoryRepository predictionHistoryRepository;
     private final PredictionFeatureRepository predictionFeatureRepository;
+    private final SubscriberRepository subscriberRepository; // [MỚI] Inject thêm
     private final PythonMLService pythonMLService;
+    private static final String OPEN_WEATHER_FORECAST_URL = "https://api.openweathermap.org/data/2.5/forecast?lat=%s&lon=%s&appid=%s&units=metric";
 
     // Thêm RestTemplate để gọi API OpenWeatherMap & Nominatim
     private final RestTemplate restTemplate;
@@ -128,8 +136,6 @@ public class WeatherService {
                 .build();
     }
 
-    // --- GIỮ NGUYÊN CODE CŨ BÊN DƯỚI ---
-
     public PredictionRequest getCurrentWeatherFromApi(Long locationId) {
         Location location = locationRepository.findById(locationId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy địa điểm"));
@@ -162,6 +168,86 @@ public class WeatherService {
             throw new RuntimeException("Không lấy được thời tiết: " + e.getMessage());
         }
         return null;
+    }
+
+    public List<PredictionResponse> getMultiDayForecast(Long locationId) {
+        // 1. Lấy thông tin địa điểm
+        Location location = locationRepository.findById(locationId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy địa điểm"));
+        // 2. Gọi API OpenWeatherMap (Lấy dữ liệu thô 5 ngày)
+        String url = String.format(OPEN_WEATHER_FORECAST_URL, location.getLatitude(), location.getLongitude(), OPEN_WEATHER_API_KEY);
+        TranHaiViet.rain_forecast_web.dto.OpenWeatherForecastResponse rawData = restTemplate.getForObject(url, TranHaiViet.rain_forecast_web.dto.OpenWeatherForecastResponse.class);
+
+        if (rawData == null || rawData.getList() == null) return List.of();
+
+        List<PredictionResponse> finalResults = new java.util.ArrayList<>();
+
+        // 3. Lấy mưa ngày hôm qua (từ DB) để làm đầu vào cho Ngày 1
+        // (Nếu không có thì giả định là 0)
+        double previousDayRain = 0.0;
+        List<PredictionHistory> history = getHistoryByLocation(locationId);
+        if (!history.isEmpty()) {
+            previousDayRain = history.get(0).getPredictedRainfall() != null ? history.get(0).getPredictedRainfall() : 0.0;
+        }
+
+        // 4. VÒNG LẶP DỰ BÁO ĐỆ QUY (RECURSIVE LOOP)
+        for (TranHaiViet.rain_forecast_web.dto.OpenWeatherForecastResponse.ForecastItem item : rawData.getList()) {
+            // Chỉ lấy dữ liệu lúc 12:00 trưa mỗi ngày để dự báo
+            if (item.getDtTxt().contains("12:00:00")) {
+
+                // A. Chuẩn bị Request gửi sang Python
+                PredictionRequest req = new PredictionRequest();
+                req.setLocationName(location.getName());
+                req.setLat(location.getLatitude().doubleValue());
+                req.setLon(location.getLongitude().doubleValue());
+
+                req.setTemperature(item.getMain().getTemp());
+                req.setHumidity(item.getMain().getHumidity());
+                req.setInputWindSpeed(item.getWind().getSpeed());
+                req.setWindUnit("ms");
+
+                // Ước lượng LST
+                req.setLst(item.getMain().getTemp() + 2.0);
+
+                // B. Gọi Python
+                PredictionResponse res = pythonMLService.getPredictionFromPython(req);
+
+                // Gán ngày dự báo để hiển thị
+                res.setMessage(item.getDtTxt().split(" ")[0]); // Lấy ngày YYYY-MM-DD
+
+                // C. Cập nhật kết quả vào danh sách
+                finalResults.add(res);
+
+                // D. [Đệ quy] Cập nhật mưa vừa dự báo làm đầu vào cho vòng lặp sau
+                previousDayRain = res.getPredictedRainfall();
+            }
+        }
+
+        return finalResults;
+    }
+
+    // 1. Lấy trang danh sách chờ (Pending)
+    public Page<PredictionHistory> getPendingHistoriesPaginated(int page, int size) {
+        // Sắp xếp ngày dự báo mới nhất lên đầu
+        Pageable pageable = PageRequest.of(page, size, Sort.by("predictionTimestamp").descending());
+        return predictionHistoryRepository.findAllByActualRainfallIsNull(pageable);
+    }
+
+    // 2. Lấy trang lịch sử toàn bộ (History)
+    public Page<PredictionHistory> getAllHistoriesPaginated(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("predictionTimestamp").descending());
+        return predictionHistoryRepository.findAll(pageable);
+    }
+
+    // 3. Lấy thống kê số lượng hoàn thành
+    public long getCompletedCount() {
+        return predictionHistoryRepository.countByActualRainfallIsNotNull();
+    }
+
+    // 4. Lấy sai số trung bình
+    public double getAverageError() {
+        Double avg = predictionHistoryRepository.calculateAverageError();
+        return avg != null ? avg : 0.0;
     }
 
     @Transactional
@@ -201,6 +287,52 @@ public class WeatherService {
         return pythonResponse;
     }
 
+    // 1. Tìm kiếm History Nâng cao
+    public Page<PredictionHistory> searchHistoryAdvanced(
+            Long locationId, LocalDate startDate, LocalDate endDate,
+            Double minRain, Double maxRain, String status, String keyword,
+            int page, int size) {
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("predictedForDate").descending());
+
+        // Xử lý keyword rỗng
+        if (keyword != null && keyword.trim().isEmpty()) keyword = null;
+        if (status != null && status.trim().isEmpty()) status = null;
+
+        return predictionHistoryRepository.searchHistoryAdvanced(
+                locationId, startDate, endDate, minRain, maxRain, status, keyword, pageable);
+    }
+
+    // 2. Tìm kiếm Verification Nâng cao
+    public Page<PredictionHistory> searchPendingAdvanced(
+            Long locationId, LocalDate startDate, LocalDate endDate,
+            Double minRain, Double maxRain, String keyword,
+            int page, int size) {
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("predictionTimestamp").descending());
+        if (keyword != null && keyword.trim().isEmpty()) keyword = null;
+
+        return predictionHistoryRepository.searchPendingAdvanced(
+                locationId, startDate, endDate, minRain, maxRain, keyword, pageable);
+    }
+
+    // 1. Tìm kiếm Lịch sử có phân trang
+    public Page<PredictionHistory> searchHistoryPaginated(Long locationId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("predictedForDate").descending());
+        return predictionHistoryRepository.searchHistory(locationId, pageable);
+    }
+
+    // 2. Tìm kiếm Pending có phân trang
+    public Page<PredictionHistory> searchPendingPaginated(Long locationId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("predictionTimestamp").descending());
+        return predictionHistoryRepository.searchPending(locationId, pageable);
+    }
+
+    // 3. Xóa bản ghi lịch sử
+    public void deleteHistory(Long id) {
+        predictionHistoryRepository.deleteById(id);
+    }
+
     public List<PredictionHistory> getPendingHistories() {
         return predictionHistoryRepository.findAll().stream()
                 .filter(h -> h.getActualRainfall() == null)
@@ -211,6 +343,46 @@ public class WeatherService {
         return predictionHistoryRepository.findAll().stream()
                 .filter(h -> h.getActualRainfall() != null)
                 .toList();
+    }
+
+    // 1. Đếm tổng số Subscriber
+    public long getTotalSubscribers() {
+        return subscriberRepository.count();
+    }
+
+    // 2. Lấy danh sách Top 5 điểm mưa to nhất ngày mai (Để hiện cảnh báo)
+    public List<PredictionHistory> getTopRisksForTomorrow() {
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
+        // Nếu muốn test dữ liệu cũ thì có thể sửa thành LocalDate.now() hoặc ngày khác
+        return predictionHistoryRepository.findTop5ByPredictedForDateOrderByPredictedRainfallDesc(tomorrow);
+    }
+
+    // Hàm phụ trợ lấy Top Risk cho ngày bất kỳ (nếu cần test)
+    public List<PredictionHistory> getTopRisksForDate(LocalDate date) {
+        return predictionHistoryRepository.findTop5ByPredictedForDateOrderByPredictedRainfallDesc(date);
+    }
+
+    // 3. Lấy dữ liệu phân bố mưa (Cho biểu đồ tròn)
+    public List<Long> getRainDistribution() {
+        long noRain = predictionHistoryRepository.countNoRain();
+        long lightRain = predictionHistoryRepository.countLightRain();
+        long moderateRain = predictionHistoryRepository.countModerateRain();
+        long heavyRain = predictionHistoryRepository.countHeavyRain();
+
+        // Trả về mảng 4 số: [Không mưa, Mưa nhỏ, Mưa vừa, Mưa to]
+        return List.of(noRain, lightRain, moderateRain, heavyRain);
+    }
+
+    public List<PredictionHistory> getLatestForecasts() {
+        List<Location> locations = locationRepository.findAll();
+        List<PredictionHistory> latestList = new ArrayList<>();
+
+        for (Location loc : locations) {
+            // Tìm dự báo mới nhất, nếu không có thì bỏ qua hoặc tạo dummy (tùy chọn)
+            predictionHistoryRepository.findLatestByLocationId(loc.getId())
+                    .ifPresent(latestList::add);
+        }
+        return latestList;
     }
 
     @Transactional

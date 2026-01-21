@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>Subscribers - RainAI Admin</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+</head>
+<body>
+<div class="admin-wrapper">
+  <div th:replace="~{admin/fragments/sidebar :: sidebar}"></div>
+
+  <div class="admin-main-panel">
+    <div th:replace="~{admin/fragments/header :: header}"></div>
+
+    <main class="admin-content">
+      <section class="modern-card" style="padding: 0; overflow: hidden;">
+
+        <div style="padding: 1.5rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+          <form action="/admin/subscribers" method="get" style="display: flex; gap: 1rem; align-items: end; flex-wrap: wrap;">
+
+            <div class="form-group" style="margin: 0; flex: 1; min-width: 250px;">
+              <label class="lbl">Tìm Email</label>
+              <input type="text" name="keyword" class="inp" placeholder="Nhập email..." th:value="${keyword}">
+            </div>
+
+            <div class="form-group" style="margin: 0; width: 250px;">
+              <label class="lbl">Khu vực quan tâm</label>
+              <select name="locationId" class="inp">
+                <option value="">-- Tất cả --</option>
+                <option th:each="loc : ${locations}"
+                        th:value="${loc.id}"
+                        th:text="${loc.name}"
+                        th:selected="${loc.id == locationId}"></option>
+              </select>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem;">
+              <button type="submit" class="btn-modern btn-primary" style="width: auto; padding: 0.85rem 1.5rem;">
+                🔍 Tìm
+              </button>
+              <a href="/admin/subscribers" class="btn-modern btn-secondary" style="width: auto; padding: 0.85rem 1rem;">
+                ↺
+              </a>
+              <button type="button" class="btn-modern btn-secondary" style="width: auto; border-color: #2563eb; color: #2563eb;"
+                      onclick="Swal.fire('Info', 'Chức năng gửi mail hàng loạt đang phát triển', 'info')">
+                📢 Gửi tin
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="table-responsive">
+          <table class="fancy-table">
+            <thead>
+            <tr>
+              <th>ID</th>
+              <th>Email</th>
+              <th>Khu vực</th>
+              <th>Ngày đăng ký</th>
+              <th>Hành động</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="sub : ${dataPage.content}">
+              <td th:text="${sub.id}"></td>
+              <td th:text="${sub.email}" style="font-weight: 600; color: #1e293b;"></td>
+              <td>
+                                <span style="background: #eff6ff; color: #2563eb; padding: 2px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 600;"
+                                      th:text="${sub.location.name}"></span>
+              </td>
+              <td th:text="${#temporals.format(sub.createdAt, 'dd/MM/yyyy HH:mm')}"></td>
+              <td>
+                <button class="btn-modern" style="background: #fee2e2; color: #ef4444; padding: 0.3rem 0.8rem; font-size: 0.8rem; width: auto;"
+                        th:onclick="'deleteSubscriber(' + ${sub.id} + ')'">
+                  🗑️ Xóa
+                </button>
+              </td>
+            </tr>
+            <tr th:if="${dataPage.empty}">
+              <td colspan="5" style="text-align: center; padding: 2rem; color: #64748b;">
+                Không tìm thấy người đăng ký nào.
+              </td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination-container" th:if="${dataPage.totalPages > 1}" style="padding: 1rem; display: flex; justify-content: center; gap: 0.5rem;">
+          <a th:href="@{/admin/subscribers(page=${currentPage - 1},
+                  locationId=${locationId},
+                  keyword=${keyword})}"
+             class="btn-modern btn-secondary"
+             th:classappend="${currentPage == 0} ? 'disabled'">Trước</a>
+
+          <span style="align-self: center; font-size: 0.9rem;">Trang [[${currentPage + 1}]] / [[${dataPage.totalPages}]]</span>
+
+          <a th:href="@{/admin/subscribers(page=${currentPage + 1},
+                  locationId=${locationId},
+                  keyword=${keyword})}"
+             class="btn-modern btn-secondary"
+             th:classappend="${currentPage + 1 == dataPage.totalPages} ? 'disabled'">Sau</a>
+        </div>
+      </section>
+    </main>
+
+    <div th:replace="~{admin/fragments/footer :: footer}"></div>
+  </div>
+</div>
+
+<script>
+  // Logic Xóa Subscriber
+  function deleteSubscriber(id) {
+      Swal.fire({
+          title: 'Hủy đăng ký email này?',
+          text: "Người dùng sẽ không nhận được cảnh báo nữa!",
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#ef4444',
+          cancelButtonColor: '#64748b',
+          confirmButtonText: 'Xóa ngay',
+          cancelButtonText: 'Hủy'
+      }).then(async (result) => {
+          if (result.isConfirmed) {
+              try {
+                  const res = await fetch('/admin/delete-subscriber', {
+                      method: 'POST',
+                      headers: {'Content-Type': 'application/json'},
+                      body: JSON.stringify({id: id})
+                  });
+                  const data = await res.json();
+
+                  if (res.ok) {
+                      Swal.fire('Đã xóa!', data.message, 'success').then(() => location.reload());
+                  } else {
+                      Swal.fire('Lỗi', data.message, 'error');
+                  }
+              } catch (err) {
+                  Swal.fire('Lỗi', 'Không thể kết nối đến server', 'error');
+              }
+          }
+      })
+  }
+</script>
+</body>
+</html>

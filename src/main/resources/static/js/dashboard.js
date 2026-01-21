@@ -6,6 +6,7 @@ class RainfallDashboard {
     this.form = document.getElementById("predictForm")
     this.predictBtn = document.getElementById("predictBtn")
     this.autoFillBtn = document.getElementById("autoFillBtn")
+    this.forecastBtn = document.getElementById("forecastBtn")
     this.locationSelect = document.getElementById("locationId")
 
     this.resultContainer = document.getElementById("resultContainer")
@@ -26,6 +27,7 @@ class RainfallDashboard {
   init() {
     if(this.form) this.form.addEventListener("submit", (e) => this.handlePredict(e))
     if(this.autoFillBtn) this.autoFillBtn.addEventListener("click", () => this.handleAutoFill())
+    if(this.forecastBtn) this.forecastBtn.addEventListener("click", () => this.handleForecast())
 
     // Intro Animation
     anime({
@@ -251,6 +253,123 @@ class RainfallDashboard {
         console.error(e);
     }
   }
+async handleForecast() {
+        const locId = document.getElementById("locationId").value;
+        const locName = document.getElementById("locationId").options[document.getElementById("locationId").selectedIndex].text;
+
+        if (!locId) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Chưa chọn địa điểm',
+                text: 'Vui lòng chọn Tỉnh/Thành phố trước khi xem dự báo 5 ngày.',
+                confirmButtonColor: '#0f172a' // var(--dark-bg)
+            });
+            return;
+        }
+
+        Swal.fire({
+            title: `Đang phân tích dữ liệu vệ tinh cho ${locName}...`,
+            html: 'Hệ thống đang chạy mô hình đệ quy để dự đoán xu hướng mưa.',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        try {
+            const res = await fetch(`/api/forecast?locationId=${locId}`);
+            if (!res.ok) throw new Error("Lỗi API");
+            const data = await res.json();
+
+            Swal.close();
+
+            // --- XÂY DỰNG HTML THEO STYLE.CSS ---
+            // Sử dụng class 'table-responsive' và 'fancy-table' từ style.css
+            let htmlContent = `
+                <div class="table-responsive" style="max-height: 400px; margin-top: 10px;">
+                    <table class="fancy-table">
+                        <thead>
+                            <tr>
+                                <th style="text-align: center;">Ngày Dự Báo</th>
+                                <th style="text-align: center;">Lượng Mưa (mm)</th>
+                                <th style="text-align: left;">Trạng Thái & Cảnh Báo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            if (data.length === 0) {
+                htmlContent += `<tr><td colspan="3" style="text-align:center;">Không có dữ liệu dự báo.</td></tr>`;
+            } else {
+                data.forEach(d => {
+                    const r = d.predicted_rainfall;
+
+                    // 1. Logic Text & Icon
+                    let statusText = 'Trời nắng / Không mưa';
+                    let icon = '☀️';
+
+                    if (r > 100) { statusText = 'Mưa đặc biệt lớn (Nguy hiểm)'; icon = '⛈️'; }
+                    else if (r > 50) { statusText = 'Mưa rất to / Giông bão'; icon = '⛈️'; }
+                    else if (r > 25) { statusText = 'Mưa to'; icon = '🌧️'; }
+                    else if (r > 10) { statusText = 'Mưa vừa'; icon = '🌦️'; }
+                    else if (r > 0.5) { statusText = 'Mưa nhỏ / Rải rác'; icon = '☁️'; }
+
+                    // 2. Logic Màu Sắc (Dùng biến CSS var)
+                    // --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
+                    let colorVar = 'var(--success)'; // Mặc định xanh
+                    let fontWeight = '500';
+
+                    if (r > 50) { colorVar = 'var(--danger)'; fontWeight = '800'; } // Đỏ
+                    else if (r > 25) { colorVar = '#ea580c'; fontWeight = '700'; } // Cam đậm
+                    else if (r > 10) { colorVar = 'var(--warning)'; fontWeight = '600'; } // Vàng
+
+                    // 3. Format Ngày (YYYY-MM-DD -> DD/MM)
+                    let dateParts = d.message.split('-');
+                    let dateStr = `${dateParts[2]}/${dateParts[1]}`;
+
+                    htmlContent += `
+                        <tr>
+                            <td style="text-align: center; color: var(--text-secondary); font-weight: 600;">
+                                ${dateStr}
+                            </td>
+                            <td style="text-align: center; font-size: 1.1rem; font-weight: 700; color: var(--dark-bg);">
+                                ${r.toFixed(1)}
+                            </td>
+                            <td style="text-align: left; color: ${colorVar}; font-weight: ${fontWeight};">
+                                <span style="margin-right: 8px;">${icon}</span> ${statusText}
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+
+            htmlContent += `
+                        </tbody>
+                    </table>
+                </div>
+                <div style="text-align: right; margin-top: 10px; font-size: 0.8rem; color: #94a3b8; font-style: italic;">
+                    *Dự báo dựa trên mô hình Hybrid AI & Dữ liệu vệ tinh
+                </div>
+            `;
+
+            // Hiển thị Popup với giao diện rộng hơn
+            Swal.fire({
+                title: `🔮 Dự Báo 5 Ngày Tới - ${locName}`,
+                html: htmlContent,
+                width: '800px', // Mở rộng chiều ngang để bảng đẹp hơn
+                showConfirmButton: true,
+                confirmButtonText: 'Đóng',
+                confirmButtonColor: '#0f172a', // var(--dark-bg)
+                background: '#ffffff',
+                customClass: {
+                    title: 'hero-title', // Tận dụng class font to đậm của header
+                    popup: 'modern-card' // Tận dụng class bo góc, đổ bóng của card
+                }
+            });
+
+        } catch (e) {
+            console.error(e);
+            Swal.fire('Lỗi', 'Không thể lấy dữ liệu dự báo từ Server.', 'error');
+        }
+    }
 }
 
 document.addEventListener("DOMContentLoaded", () => { new RainfallDashboard() });

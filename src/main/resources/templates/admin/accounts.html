@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Tài khoản - RainAI Admin</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/animejs@3/lib/anime.min.js"></script>
+</head>
+<body>
+<div class="admin-wrapper">
+    <div th:replace="~{admin/fragments/sidebar :: sidebar}"></div>
+
+    <div class="admin-main-panel">
+        <div th:replace="~{admin/fragments/header :: header}"></div>
+
+        <main class="admin-content">
+            <section class="modern-card" style="padding: 0; overflow: hidden;">
+
+                <div style="padding: 1.5rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                    <form action="/admin/accounts" method="get" style="display: flex; gap: 1rem; align-items: end; flex-wrap: wrap;">
+
+                        <div class="form-group" style="margin: 0; flex: 1; min-width: 250px;">
+                            <label class="lbl">Tìm kiếm</label>
+                            <input type="text" name="keyword" class="inp" placeholder="Nhập Username hoặc Họ tên..." th:value="${keyword}">
+                        </div>
+
+                        <div class="form-group" style="margin: 0; width: 200px;">
+                            <label class="lbl">Vai trò</label>
+                            <select name="role" class="inp">
+                                <option value="">-- Tất cả --</option>
+                                <option value="ADMIN" th:selected="${role == 'ADMIN'}">ADMIN</option>
+                                <option value="MANAGER" th:selected="${role == 'MANAGER'}">MANAGER</option>
+                            </select>
+                        </div>
+
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button type="submit" class="btn-modern btn-primary" style="width: auto; padding: 0.85rem 1.5rem;">
+                                🔍 Tìm
+                            </button>
+                            <a href="/admin/accounts" class="btn-modern btn-secondary" style="width: auto; padding: 0.85rem 1rem;">
+                                ↺
+                            </a>
+                            <button type="button" class="btn-modern btn-secondary" style="width: auto; border-color: #2563eb; color: #2563eb;" onclick="openModal()">
+                                + Thêm mới
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="fancy-table">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Họ tên</th>
+                            <th>Vai trò</th>
+                            <th>Hành động</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="user : ${users.content}">
+                            <td th:text="${user.id}"></td>
+                            <td th:text="${user.username}" style="font-weight: 700; color: #1e293b;"></td>
+                            <td th:text="${user.fullName}"></td>
+                            <td>
+                                <span th:if="${user.role == 'ADMIN'}" style="background: #dbeafe; color: #1e40af; padding: 3px 10px; border-radius: 20px; font-weight: 600; font-size: 0.75rem;">ADMIN</span>
+                                <span th:if="${user.role == 'MANAGER'}" style="background: #f3f4f6; color: #374151; padding: 3px 10px; border-radius: 20px; font-weight: 600; font-size: 0.75rem; border: 1px solid #e5e7eb;">MANAGER</span>
+                            </td>
+                            <td>
+                                <button class="btn-modern btn-secondary" style="padding: 0.3rem 0.8rem; font-size: 0.8rem; width: auto;"
+                                        th:onclick="openModal([[${user.id}]], [[${user.username}]], [[${user.fullName}]], [[${user.role}]])">
+                                    ✏️ Sửa
+                                </button>
+                                <button class="btn-modern" style="background: #fee2e2; color: #ef4444; padding: 0.3rem 0.8rem; font-size: 0.8rem; width: auto; margin-left: 0.5rem;"
+                                        th:if="${user.username != 'admin'}"
+                                        th:onclick="deleteUser([[${user.id}]])">
+                                    🗑️ Xóa
+                                </button>
+                            </td>
+                        </tr>
+                        <tr th:if="${users.empty}">
+                            <td colspan="5" style="text-align: center; padding: 2rem; color: #64748b;">
+                                Không tìm thấy tài khoản nào phù hợp.
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="pagination-container" th:if="${users.totalPages > 1}" style="padding: 1rem; display: flex; justify-content: center; gap: 0.5rem;">
+                    <a th:href="@{/admin/accounts(page=${currentPage - 1}, role=${role}, keyword=${keyword})}"
+                       class="btn-modern btn-secondary" th:classappend="${currentPage == 0} ? 'disabled'">Trước</a>
+
+                    <span style="align-self: center; font-size: 0.9rem;">Trang [[${currentPage + 1}]] / [[${users.totalPages}]]</span>
+
+                    <a th:href="@{/admin/accounts(page=${currentPage + 1}, role=${role}, keyword=${keyword})}"
+                       class="btn-modern btn-secondary" th:classappend="${currentPage + 1 == users.totalPages} ? 'disabled'">Sau</a>
+                </div>
+            </section>
+        </main>
+
+        <div th:replace="~{admin/fragments/footer :: footer}"></div>
+    </div>
+</div>
+
+<div id="accountModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(5px); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="modern-card" style="width: 450px; max-width: 90%; margin: 0;">
+        <h3 id="modalTitle" style="margin-bottom: 1.5rem; color: #0f172a;">Thêm tài khoản</h3>
+        <form id="accountForm">
+            <input type="hidden" id="userId">
+
+            <div class="form-group">
+                <label class="lbl">Tên đăng nhập</label>
+                <input type="text" id="username" class="inp" required>
+            </div>
+            <div class="form-group">
+                <label class="lbl">Họ và tên</label>
+                <input type="text" id="fullName" class="inp" required>
+            </div>
+            <div class="form-group">
+                <label class="lbl">Mật khẩu <span id="passHint" style="font-weight: normal; text-transform: none; color: #64748b; font-size: 0.8rem;"></span></label>
+                <input type="password" id="password" class="inp">
+            </div>
+            <div class="form-group">
+                <label class="lbl">Vai trò</label>
+                <select id="role" class="inp">
+                    <option value="MANAGER">MANAGER (Quản lý)</option>
+                    <option value="ADMIN">ADMIN (Quản trị viên)</option>
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button type="button" class="btn-modern btn-secondary" style="flex: 1;" onclick="closeModal()">Hủy</button>
+                <button type="submit" class="btn-modern btn-primary" style="flex: 1;">Lưu thông tin</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const modal = document.getElementById('accountModal');
+
+    function openModal(id = '', username = '', fullName = '', role = 'MANAGER') {
+        document.getElementById('userId').value = id;
+        document.getElementById('username').value = username;
+        document.getElementById('fullName').value = fullName;
+        document.getElementById('role').value = role;
+        document.getElementById('password').value = '';
+
+        const title = document.getElementById('modalTitle');
+        const userInp = document.getElementById('username');
+        const passHint = document.getElementById('passHint');
+
+        if(id) {
+            title.innerText = 'Cập nhật tài khoản';
+            userInp.disabled = true; // Không cho sửa username
+            userInp.style.backgroundColor = '#f1f5f9';
+            userInp.style.color = '#64748b';
+            passHint.innerText = '(Để trống nếu không đổi)';
+        } else {
+            title.innerText = 'Thêm tài khoản mới';
+            userInp.disabled = false;
+            userInp.style.backgroundColor = 'white';
+            userInp.style.color = 'inherit';
+            passHint.innerText = '(Bắt buộc)';
+        }
+
+        modal.style.display = 'flex';
+        // Animation hiện modal
+        anime({
+            targets: modal.querySelector('.modern-card'),
+            scale: [0.9, 1],
+            opacity: [0, 1],
+            duration: 300,
+            easing: 'easeOutExpo'
+        });
+    }
+
+    function closeModal() { modal.style.display = 'none'; }
+
+    // Xử lý Lưu (Thêm/Sửa)
+    document.getElementById('accountForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+            id: document.getElementById('userId').value,
+            username: document.getElementById('username').value,
+            fullName: document.getElementById('fullName').value,
+            role: document.getElementById('role').value,
+            password: document.getElementById('password').value
+        };
+
+        try {
+            const res = await fetch('/admin/accounts/save', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+
+            if(data.success) {
+                closeModal();
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Thành công',
+                    text: data.message,
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => location.reload());
+            } else {
+                Swal.fire('Lỗi', data.message, 'error');
+            }
+        } catch (err) {
+            Swal.fire('Lỗi hệ thống', 'Không thể kết nối đến server', 'error');
+        }
+    });
+
+    // Xử lý Xóa
+    function deleteUser(id) {
+        Swal.fire({
+            title: 'Xóa tài khoản này?',
+            text: "Hành động này không thể hoàn tác!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Xóa ngay',
+            cancelButtonText: 'Hủy'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    const res = await fetch('/admin/accounts/delete', {
+                        method: 'POST', headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({id: id})
+                    });
+                    const data = await res.json();
+                    if(data.success) {
+                        Swal.fire('Đã xóa!', '', 'success').then(() => location.reload());
+                    } else {
+                        Swal.fire('Lỗi', data.message, 'error');
+                    }
+                } catch (err) {
+                    Swal.fire('Lỗi', 'Không thể xóa tài khoản', 'error');
+                }
+            }
+        })
+    }
+
+    // Đóng modal khi click ra ngoài
+    modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
+</script>
+</body>
+</html>

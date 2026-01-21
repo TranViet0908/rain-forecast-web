@@ -11,7 +11,7 @@ public class ModelInfoResponse {
     private String algorithm;
 
     @JsonProperty("metrics")
-    private Map<String, Double> metrics;
+    private Map<String, Object> metrics;
 
     @JsonProperty("feature_importance")
     private List<FeatureScore> featureImportance;

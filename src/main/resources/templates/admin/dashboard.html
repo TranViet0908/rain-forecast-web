@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - RainAI</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<div class="admin-wrapper">
+    <div th:replace="~{admin/fragments/sidebar :: sidebar}"></div>
+
+    <div class="admin-main-panel">
+
+        <div th:replace="~{admin/fragments/header :: header}"></div>
+
+        <main class="admin-content">
+            <h2 style="margin-bottom: 1.5rem; color: #0f172a;">Tổng quan hệ thống</h2>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">Cần xác thực</div>
+                    <div class="stat-number" style="color: #f59e0b;" th:text="${pendingCount}">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">Đã hoàn thành</div>
+                    <div class="stat-number" style="color: #10b981;" th:text="${confirmedCount}">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">Sai số TB</div>
+                    <div class="stat-number" style="color: #3b82f6;" th:text="${avgError} + ' mm'">0.0</div>
+                </div>
+            </div>
+
+            <section class="modern-card" style="margin-top: 2rem;">
+                <div style="padding: 1.5rem; border-bottom: 1px solid #e2e8f0;">
+                    <h3 style="margin: 0; font-size: 1.1rem;">📉 Xu hướng dự báo vs Thực tế</h3>
+                </div>
+                <div style="padding: 1.5rem; height: 400px;">
+                    <canvas id="comparisonChart"></canvas>
+                </div>
+            </section>
+        </main>
+
+        <div th:replace="~{admin/fragments/footer :: footer}"></div>
+    </div>
+</div>
+
+<script th:inline="javascript">const serverHistoryData = /*[[${chartData}]]*/ [];</script>
+<script src="/js/history-chart.js"></script>
+</body>
+</html>

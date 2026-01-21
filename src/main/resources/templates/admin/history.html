@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>Lịch sử dự báo - RainAI Admin</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+</head>
+<body>
+<div class="admin-wrapper">
+  <div th:replace="~{admin/fragments/sidebar :: sidebar}"></div>
+
+  <div class="admin-main-panel">
+    <div th:replace="~{admin/fragments/header :: header}"></div>
+
+    <main class="admin-content">
+      <section class="modern-card" style="padding: 0; overflow: hidden;">
+
+        <div style="padding: 1.5rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+          <form action="/admin/history" method="get" id="filterForm">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; align-items: end;">
+
+              <div class="form-group" style="margin: 0;">
+                <label class="lbl">Từ khóa</label>
+                <input type="text" name="keyword" class="inp" placeholder="Tên trạm..." th:value="${keyword}">
+              </div>
+
+              <div class="form-group" style="margin: 0;">
+                <label class="lbl">Khu vực</label>
+                <select name="locationId" class="inp">
+                  <option value="">-- Tất cả --</option>
+                  <option th:each="loc : ${locations}" th:value="${loc.id}" th:text="${loc.name}" th:selected="${loc.id == locationId}"></option>
+                </select>
+              </div>
+
+              <div class="form-group" style="margin: 0;">
+                <label class="lbl">Trạng thái</label>
+                <select name="status" class="inp">
+                  <option value="">-- Tất cả --</option>
+                  <option value="COMPLETED" th:selected="${status == 'COMPLETED'}">Hoàn thành (Có thực tế)</option>
+                  <option value="PENDING" th:selected="${status == 'PENDING'}">Chờ xử lý</option>
+                </select>
+              </div>
+
+              <div class="form-group" style="margin: 0;">
+                <label class="lbl">Từ ngày</label>
+                <input type="date" name="startDate" class="inp" th:value="${startDate}">
+              </div>
+
+              <div class="form-group" style="margin: 0;">
+                <label class="lbl">Đến ngày</label>
+                <input type="date" name="endDate" class="inp" th:value="${endDate}">
+              </div>
+
+              <div class="form-group" style="margin: 0;">
+                <label class="lbl">Mưa Min (mm)</label>
+                <input type="number" step="0.1" name="minRain" class="inp" placeholder="0" th:value="${minRain}">
+              </div>
+
+              <div class="form-group" style="margin: 0;">
+                <label class="lbl">Mưa Max (mm)</label>
+                <input type="number" step="0.1" name="maxRain" class="inp" placeholder="Max" th:value="${maxRain}">
+              </div>
+
+              <button type="submit" class="btn-modern btn-primary" style="height: 46px;">🔍 Lọc dữ liệu</button>
+              <a href="/admin/history" class="btn-modern btn-secondary" style="height: 46px; text-align: center;">Reset</a>
+            </div>
+          </form>
+        </div>
+
+        <div class="table-responsive">
+          <table class="fancy-table">
+            <thead>
+            <tr>
+              <th>ID</th> <th>Ngày dự báo</th>
+              <th>Khu vực</th>
+              <th>Dự báo (mm)</th>
+              <th>Thực tế (mm)</th>
+              <th>Trạng thái</th>
+              <th>Hành động</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="hist : ${dataPage.content}">
+              <td th:text="${hist.id}" style="font-weight: bold; color: #64748b;"></td> <td th:text="${hist.predictedForDate}"></td>
+              <td th:text="${hist.location.name}" style="font-weight: 600;"></td>
+              <td style="color: #2563eb; font-weight: 700;">
+                <span th:text="${#numbers.formatDecimal(hist.predictedRainfall, 1, 1)}"></span>
+              </td>
+              <td>
+                <span th:if="${hist.actualRainfall != null}" th:text="${hist.actualRainfall}"></span>
+                <span th:if="${hist.actualRainfall == null}" style="color: #cbd5e1;">---</span>
+              </td>
+              <td>
+                <span th:if="${hist.actualRainfall != null}" class="status-success">Hoàn thành</span>
+                <span th:if="${hist.actualRainfall == null}" class="status-wait">Chờ duyệt</span>
+              </td>
+              <td>
+                <button class="btn-modern" style="background: #fee2e2; color: #ef4444; padding: 0.3rem 0.8rem; font-size: 0.8rem;"
+                        th:onclick="'deleteRecord(' + ${hist.id} + ')'">
+                  🗑️ Xóa
+                </button>
+              </td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination-container" th:if="${dataPage.totalPages > 1}" style="padding: 1rem; display: flex; justify-content: center; gap: 0.5rem;">
+          <a th:href="@{/admin/history(page=${currentPage - 1},
+                  locationId=${locationId},
+                  keyword=${keyword},
+                  status=${status},
+                  startDate=${startDate},
+                  endDate=${endDate},
+                  minRain=${minRain},
+                  maxRain=${maxRain})}"
+             class="btn-modern btn-secondary"
+             th:classappend="${currentPage == 0} ? 'disabled'">Trước</a>
+
+          <span style="align-self: center; font-size: 0.9rem;">Trang [[${currentPage + 1}]] / [[${dataPage.totalPages}]]</span>
+
+          <a th:href="@{/admin/history(page=${currentPage + 1},
+                  locationId=${locationId},
+                  keyword=${keyword},
+                  status=${status},
+                  startDate=${startDate},
+                  endDate=${endDate},
+                  minRain=${minRain},
+                  maxRain=${maxRain})}"
+             class="btn-modern btn-secondary"
+             th:classappend="${currentPage + 1 == dataPage.totalPages} ? 'disabled'">Sau</a>
+        </div>
+      </section>
+    </main>
+
+    <div th:replace="~{admin/fragments/footer :: footer}"></div>
+  </div>
+</div>
+
+<script>
+  // Hàm Xóa dùng AJAX
+  function deleteRecord(id) {
+      Swal.fire({
+          title: 'Bạn chắc chắn chứ?',
+          text: "Dữ liệu sẽ bị xóa vĩnh viễn!",
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#ef4444',
+          cancelButtonColor: '#64748b',
+          confirmButtonText: 'Vâng, xóa nó!'
+      }).then(async (result) => {
+          if (result.isConfirmed) {
+              try {
+                  const res = await fetch('/admin/delete-history', {
+                      method: 'POST',
+                      headers: {'Content-Type': 'application/json'},
+                      body: JSON.stringify({id: id})
+                  });
+                  if(res.ok) {
+                      Swal.fire('Đã xóa!', 'Bản ghi đã được xóa.', 'success').then(() => location.reload());
+                  } else {
+                      Swal.fire('Lỗi', 'Không thể xóa.', 'error');
+                  }
+              } catch(e) { console.error(e); }
+          }
+      })
+  }
+</script>
+</body>
+</html>

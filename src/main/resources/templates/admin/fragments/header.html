@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+<header th:fragment="header" class="admin-header">
+  <h3 style="margin: 0; font-size: 1.1rem; color: #334155; font-weight: 600;" th:text="${pageTitle}">Admin Panel</h3>
+
+  <div style="display: flex; align-items: center; gap: 1rem;">
+    <span style="font-size: 0.9rem; color: #64748b;">Xin chào, <b sec:authentication="name" style="color: #0f172a;">Admin</b></span>
+    <div style="width: 32px; height: 32px; background: #e2e8f0; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+      👤
+    </div>
+  </div>
+</header>
+</body>
+</html>

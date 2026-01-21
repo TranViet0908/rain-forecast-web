@@ -2,98 +2,517 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Khoa Học & Mô Hình - RainAI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Công Nghệ & Mô Hình - RainAI</title>
     <link rel="stylesheet" href="/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/animejs@3/lib/anime.min.js"></script>
     <style>
+        /* Page Hero Section */
+        .method-hero {
+            background: linear-gradient(135deg, #2563eb 0%, #06b6d4 50%, #0ea5e9 100%);
+            color: white;
+            padding: 6rem 2rem;
+            border-radius: var(--radius-2xl);
+            margin-bottom: 3rem;
+            position: relative;
+            overflow: hidden;
+            animation: slideDown 0.8s ease-out;
+            box-shadow: 0 20px 60px rgba(37, 99, 235, 0.3);
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .method-hero::before {
+            content: '';
+            position: absolute;
+            top: -40%;
+            right: -15%;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
+            border-radius: 50%;
+            filter: blur(50px);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .method-hero::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: -10%;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+            border-radius: 50%;
+            filter: blur(40px);
+            animation: float 8s ease-in-out infinite reverse;
+        }
+
+        .method-hero .hero-title {
+            position: relative;
+            z-index: 10;
+            font-size: clamp(2.5rem, 7vw, 4rem);
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            line-height: 1.1;
+            text-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            letter-spacing: -0.5px;
+        }
+
+        .method-hero .hero-desc {
+            position: relative;
+            z-index: 10;
+            font-size: 1.15rem;
+            opacity: 0.95;
+            line-height: 1.8;
+            margin-bottom: 2rem;
+            font-weight: 400;
+            max-width: 700px;
+            animation: fadeInUp 0.8s ease-out 0.2s backwards;
+        }
+
         .method-container {
-            max-width: 1000px; margin: 40px auto; padding: 0 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
         }
+
+        /* Tech Cards with Enhanced Design */
         .tech-card {
-            background: rgba(255,255,255,0.9); border-radius: 16px; padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1); margin-bottom: 30px;
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: 3rem;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 3rem;
+            border: 1px solid #e2e8f0;
+            transition: all 0.3s ease;
+            animation: fadeInUp 0.6s ease-out backwards;
         }
+
+        .tech-card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-4px);
+            border-color: var(--primary);
+        }
+
+        .tech-card:nth-child(1) { animation-delay: 0.1s; }
+        .tech-card:nth-child(2) { animation-delay: 0.2s; }
+        .tech-card:nth-child(3) { animation-delay: 0.3s; }
+
         .tech-header {
-            font-size: 1.5rem; font-weight: 700; color: #1e293b; margin-bottom: 20px;
-            display: flex; align-items: center; gap: 10px;
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding-bottom: 1rem;
+            border-bottom: 3px solid var(--primary);
         }
+
+        /* Metrics Grid */
         .metric-grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
         }
+
         .metric-box {
-            background: #f8fafc; padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #e2e8f0;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            padding: 2.5rem;
+            border-radius: var(--radius-lg);
+            text-align: center;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-sm);
         }
-        .metric-val { font-size: 2rem; font-weight: 800; color: #0284c7; }
-        .metric-lbl { color: #64748b; font-size: 0.9rem; text-transform: uppercase; margin-top: 5px; }
+
+        .metric-box:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--primary);
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        }
+
+        .metric-val {
+            font-size: 2.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+            margin-bottom: 0.75rem;
+        }
+
+        .metric-lbl {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
+        /* Chart Container */
+        .chart-wrapper {
+            position: relative;
+            height: 450px;
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.02) 0%, rgba(6, 182, 212, 0.02) 100%);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Description Section */
+        .description-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: center;
+            margin-top: 2rem;
+        }
+
+        .description-text {
+            color: var(--text-secondary);
+            line-height: 1.8;
+            font-size: 1.05rem;
+        }
+
+        .description-text strong {
+            color: var(--text-main);
+            font-weight: 700;
+        }
+
+        .description-text ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 1.5rem 0;
+        }
+
+        .description-text li {
+            padding-left: 2.5rem;
+            position: relative;
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .description-text li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+
+        .visual-placeholder {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 350px;
+            color: white;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .visual-content {
+            text-align: center;
+        }
+
+        .visual-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            animation: spin 8s linear infinite;
+        }
+
+        .visual-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+            opacity: 0.95;
+        }
+
+        .error-message {
+            padding: 2rem;
+            background: #fee2e2;
+            color: #991b1b;
+            border-radius: var(--radius-lg);
+            border-left: 4px solid #ef4444;
+            font-weight: 600;
+        }
+
+        /* Feature Description Grid */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .feature-item {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            padding: 2rem;
+            border-radius: var(--radius-lg);
+            border-left: 4px solid var(--primary);
+            transition: all 0.3s ease;
+        }
+
+        .feature-item:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-md);
+            border-left-color: var(--secondary);
+        }
+
+        .feature-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 0.75rem;
+        }
+
+        .feature-desc {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        /* Highlight Box */
+        .highlight-box {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 2.5rem;
+            border-radius: var(--radius-xl);
+            margin: 2rem 0;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .highlight-box h3 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+            font-weight: 800;
+        }
+
+        .highlight-box p {
+            margin: 0.75rem 0;
+            opacity: 0.95;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 1024px) {
+            .description-section {
+                grid-template-columns: 1fr;
+            }
+
+            .tech-card {
+                padding: 2rem;
+            }
+
+            .metric-grid {
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                gap: 1.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .method-container {
+                padding: 0 1rem;
+            }
+
+            .tech-card {
+                padding: 1.5rem;
+                margin-bottom: 2rem;
+            }
+
+            .tech-header {
+                font-size: 1.3rem;
+            }
+
+            .chart-wrapper {
+                height: 300px;
+                padding: 1rem;
+            }
+
+            .metric-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .visual-placeholder {
+                height: 250px;
+            }
+
+            .visual-icon {
+                font-size: 3rem;
+            }
+        }
     </style>
 </head>
 <body>
 <div th:replace="fragments/header :: header"></div>
 
 <main class="method-container">
-    <div class="page-hero" style="padding: 40px 0; margin-bottom: 20px;">
-        <h1 class="hero-title">Công Nghệ Lõi</h1>
-        <p class="hero-desc">Sự kết hợp giữa Dữ liệu vệ tinh (LST) và Machine Learning (Random Forest)</p>
-    </div>
+    <!-- PAGE HERO -->
+    <section class="cinematic-hero hero-bg-method">
+        <div class="hero-content-box">
+            <div class="hero-badge">
+                <span>🔬</span> <span>Khoa học dữ liệu</span>
+            </div>
+            <h1 class="hero-title-new">Công Nghệ Lõi RainAI</h1>
+            <p class="hero-desc-new">
+                Khám phá cách chúng tôi kết hợp Machine Learning và dữ liệu Nhiệt độ bề mặt đất (LST) để giải bài toán dự báo mưa.
+            </p>
+        </div>
+    </section>
 
-    <!-- 1. HIỆU SUẤT MÔ HÌNH -->
+    <!-- SECTION 1: MODEL PERFORMANCE -->
     <div class="tech-card">
-        <div class="tech-header">🚀 Hiệu Suất Mô Hình (Real-time)</div>
-        <div class="metric-grid" th:if="${modelInfo != null}">
-            <div class="metric-box">
-                <div class="metric-val" th:text="${modelInfo.metrics['accuracy_gatekeeper']} + '%'">0%</div>
-                <div class="metric-lbl">Độ chính xác phân loại (Mưa/Không)</div>
+        <div class="tech-header">
+            <span>📊</span> Hiệu Suất Mô Hình (Real-time)
+        </div>
+
+        <div th:if="${modelInfo != null}">
+            <div class="metric-grid">
+                <div class="metric-box">
+                    <div class="metric-val" th:text="${modelInfo.metrics['gatekeeper_accuracy']}">0%</div>
+                    <div class="metric-lbl">Độ chính xác phân loại (Mưa/Không)</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-val" th:text="${modelInfo.metrics['specialist_r2']}">0.0</div>
+                    <div class="metric-lbl">R² Score (Độ khớp lượng mưa)</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-val">15,000+</div>
+                    <div class="metric-lbl">Mẫu dữ liệu huấn luyện (1984-2024)</div>
+                </div>
             </div>
-            <div class="metric-box">
-                <div class="metric-val" th:text="${modelInfo.metrics['r2_score_specialist']}">0.0</div>
-                <div class="metric-lbl">R2 Score (Độ khớp lượng mưa)</div>
-            </div>
-            <div class="metric-box">
-                <div class="metric-val">15,000+</div>
-                <div class="metric-lbl">Mẫu dữ liệu huấn luyện (1984-2024)</div>
+
+            <div class="highlight-box">
+                <h3>✨ Đặc Điểm Nổi Bật</h3>
+                <p>✓ Sử dụng kiến trúc hai tầng: Gatekeeper (phân loại mưa/không) + Specialist (ước lượng lượng mưa)</p>
+                <p>✓ Dữ liệu huấn luyện từ 40 năm (1984-2024) từ toàn Miền Trung</p>
+                <p>✓ Đang được cải thiện liên tục với dữ liệu thực tế</p>
             </div>
         </div>
-        <div th:unless="${modelInfo != null}" style="text-align: center; color: red;">
-            Không thể kết nối tới Model Python Server.
+
+        <div th:unless="${modelInfo != null}" class="error-message">
+            ⚠️ Không thể kết nối tới Model Python Server. Vui lòng kiểm tra lại kết nối.
         </div>
     </div>
 
-    <!-- 2. BIỂU ĐỒ FEATURE IMPORTANCE -->
+    <!-- SECTION 2: FEATURE IMPORTANCE -->
     <div class="tech-card">
-        <div class="tech-header">📊 Yếu Tố Ảnh Hưởng Nhất</div>
-        <p style="color: #64748b; margin-bottom: 20px;">
+        <div class="tech-header">
+            <span>🎯</span> Yếu Tố Ảnh Hưởng Nhất
+        </div>
+
+        <p style="color: var(--text-secondary); margin-bottom: 2rem; line-height: 1.7;">
             Biểu đồ dưới đây cho thấy AI "coi trọng" yếu tố nào nhất khi đưa ra quyết định dự báo mưa.
-            Dữ liệu được trích xuất trực tiếp từ cấu trúc cây quyết định của mô hình.
+            Dữ liệu được trích xuất trực tiếp từ cấu trúc cây quyết định của mô hình Random Forest.
         </p>
-        <div style="height: 400px; position: relative;">
+
+        <div class="chart-wrapper">
             <canvas id="featureChart"></canvas>
         </div>
+
+        <div class="feature-grid" style="margin-top: 3rem;">
+            <div class="feature-item">
+                <div class="feature-title">🌡️ Nhiệt độ Bề Mặt (LST)</div>
+                <div class="feature-desc">Dự báo bốc hơi nước và hình thành mây. LST cao → bốc hơi tăng → xu hướng mưa cao.</div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-title">💧 Độ Ẩm Không Khí</div>
+                <div class="feature-desc">Độ ẩm cao là điều kiện cần thiết để hình thành mây và mưa. Thường kết hợp với LST.</div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-title">📈 Mưa Ngày Hôm Trước</div>
+                <div class="feature-desc">Mưa hôm trước có liên quan đến hệ thống thời tiết, giúp dự báo khả năng mưa tiếp theo.</div>
+            </div>
+        </div>
     </div>
 
-    <!-- 3. GIẢI THÍCH LST -->
+    <!-- SECTION 3: LST EXPLANATION -->
     <div class="tech-card">
-        <div class="tech-header">🛰️ Land Surface Temperature (LST) là gì?</div>
-        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-            <div style="flex: 1; min-width: 300px;">
+        <div class="tech-header">
+            <span>🛰️</span> Land Surface Temperature (LST) là gì?
+        </div>
+
+        <div class="description-section">
+            <div class="description-text">
                 <p><strong>Nhiệt độ bề mặt đất (LST)</strong> khác với nhiệt độ không khí mà chúng ta cảm nhận. Nó là nhiệt độ lớp ngoài cùng của trái đất, được đo bằng cảm biến hồng ngoại từ vệ tinh.</p>
-                <p>Trong dự án này, LST đóng vai trò quan trọng vì:</p>
-                <ul style="margin-left: 20px; line-height: 1.6; color: #475569;">
+
+                <p><strong>Tại sao LST quan trọng trong dự báo mưa?</strong></p>
+                <ul>
                     <li>Giúp phát hiện sự bốc hơi nước từ mặt đất (nguyên liệu tạo mây).</li>
                     <li>Tương quan chặt chẽ với độ ẩm đất trước khi mưa.</li>
                     <li>Cung cấp dữ liệu chi tiết hơn so với các trạm khí tượng thưa thớt.</li>
+                    <li>Cho phép dự báo ở vùng sâu không có trạm đo chính thức.</li>
                 </ul>
+
+                <p><strong>Nguồn dữ liệu:</strong> Vệ tinh MODIS (Moderate Resolution Imaging Spectroradiometer) từ NASA, cập nhật hàng ngày.</p>
             </div>
-            <div style="flex: 1; min-width: 300px; background: #e2e8f0; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-                <!-- Placeholder ảnh LST -->
-                <div style="text-align: center; padding: 20px;">
-                    <div style="font-size: 3rem;">🛰️ 📡</div>
-                    <div style="margin-top: 10px; color: #64748b;">Mô phỏng dữ liệu vệ tinh</div>
+
+            <div class="visual-placeholder">
+                <div class="visual-content">
+                    <div class="visual-icon">🛰️</div>
+                    <div class="visual-text">Dữ liệu Vệ Tinh</div>
+                    <p style="margin-top: 1rem; opacity: 0.8; font-size: 0.9rem;">Dàn cảm biến hồng ngoại từ quỹ đạo</p>
                 </div>
+            </div>
+        </div>
+
+        <div class="highlight-box" style="margin-top: 2.5rem;">
+            <h3>📡 Cách Vệ Tinh Đo LST</h3>
+            <p>Vệ tinh MODIS quay quanh Trái Đất 2 lần/ngày, đo bức xạ hồng ngoại từ bề mặt. Thông qua các công thức vật lý, ta tính toán được nhiệt độ bề mặt. Độ phân giải khoảng 1km², cho phép ta thấy chi tiết từng khu vực nhỏ trong Miền Trung.</p>
+        </div>
+    </div>
+
+    <!-- SECTION 4: TECHNICAL SPECS -->
+    <div class="tech-card">
+        <div class="tech-header">
+            <span>⚙️</span> Chi Tiết Kỹ Thuật
+        </div>
+
+        <div class="feature-grid">
+            <div class="feature-item">
+                <div class="feature-title">Kiến Trúc Mô Hình</div>
+                <div class="feature-desc">Random Forest với 2 tầng: Gatekeeper (phân loại) + Specialist (hồi quy). Tổng cộng 200+ cây quyết định.</div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-title">Đầu Vào (Features)</div>
+                <div class="feature-desc">LST, nhiệt độ KK, độ ẩm, tốc độ gió, điểm sương, cùng các đặc trưng không gian và thời gian.</div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-title">Xử Lý Dữ Liệu</div>
+                <div class="feature-desc">Chuẩn hóa Z-score, xử lý dữ liệu thiếu bằng trung bình 3 ngày, validation 10-fold cross-validation.</div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-title">Thời Gian Dự Báo</div>
+                <div class="feature-desc">Dự báo ngày hôm nay dựa trên dữ liệu sáng cùng ngày. Cập nhật 2-4 lần mỗi ngày.</div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-title">Độ Chính Xác</div>
+                <div class="feature-desc">Lỗi RMSE trung bình 15-20mm. Hiệu suất tốt nhất ở mùa mưa, kém hơn ở vùng núi cao.</div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-title">Giới Hạn</div>
+                <div class="feature-desc">Không dự báo chính xác mưa giông đột ngột. Hiệu suất hạn chế ở vùng có địa hình phức tạp.</div>
             </div>
         </div>
     </div>
 </main>
+
+<div th:replace="fragments/footer :: footer"></div>
 
 <script th:inline="javascript">
     /*<![CDATA[*/
@@ -102,10 +521,9 @@
 
         if (modelInfo && modelInfo.feature_importance) {
             const ctx = document.getElementById('featureChart');
-            const labels = modelInfo.feature_importance.slice(0, 10).map(f => f.name); // Top 10
+            const labels = modelInfo.feature_importance.slice(0, 10).map(f => f.name);
             const data = modelInfo.feature_importance.slice(0, 10).map(f => f.score);
 
-            // Mapping tên cho đẹp
             const nameMap = {
                 'lst': 'Nhiệt độ bề mặt (LST)',
                 'humidity': 'Độ ẩm',
@@ -115,7 +533,8 @@
                 'temperature': 'Nhiệt độ KK',
                 'wind_speed': 'Tốc độ gió',
                 'heat_index': 'Chỉ số nhiệt',
-                'lat': 'Vĩ độ', 'lon': 'Kinh độ'
+                'lat': 'Vĩ độ',
+                'lon': 'Kinh độ'
             };
             const niceLabels = labels.map(l => nameMap[l] || l);
 
@@ -126,27 +545,57 @@
                     datasets: [{
                         label: 'Mức độ ảnh hưởng (%)',
                         data: data.map(x => (x * 100).toFixed(2)),
-                        backgroundColor: 'rgba(59, 130, 246, 0.6)',
-                        borderColor: 'rgb(59, 130, 246)',
-                        borderWidth: 1,
-                        borderRadius: 6
+                        backgroundColor: [
+                            'rgba(37, 99, 235, 0.8)',
+                            'rgba(6, 182, 212, 0.8)',
+                            'rgba(34, 197, 94, 0.8)',
+                            'rgba(249, 115, 22, 0.8)',
+                            'rgba(168, 85, 247, 0.8)',
+                            'rgba(236, 72, 153, 0.8)',
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(14, 165, 233, 0.8)',
+                            'rgba(132, 204, 22, 0.8)',
+                            'rgba(244, 114, 182, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgb(37, 99, 235)',
+                            'rgb(6, 182, 212)',
+                            'rgb(34, 197, 94)',
+                            'rgb(249, 115, 22)',
+                            'rgb(168, 85, 247)',
+                            'rgb(236, 72, 153)',
+                            'rgb(59, 130, 246)',
+                            'rgb(14, 165, 233)',
+                            'rgb(132, 204, 22)',
+                            'rgb(244, 114, 182)'
+                        ],
+                        borderWidth: 2,
+                        borderRadius: 8
                     }]
                 },
                 options: {
-                    indexAxis: 'y', // Biểu đồ ngang
+                    indexAxis: 'y',
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { x: { beginAtZero: true } }
+                    plugins: {
+                        legend: { display: true, position: 'top' },
+                        tooltip: { backgroundColor: 'rgba(0,0,0,0.7)', titleColor: '#fff', bodyColor: '#fff', padding: 12, borderRadius: 8 }
+                    },
+                    scales: {
+                        x: { beginAtZero: true, max: 100, ticks: { callback: function(value) { return value + '%'; } } }
+                    }
                 }
             });
         }
 
-        // Animation
+        // Page animations
         anime({
             targets: '.tech-card',
-            translateY: [20, 0], opacity: [0, 1],
-            delay: anime.stagger(100), easing: 'easeOutQuad'
+            translateY: [30, 0],
+            opacity: [0, 1],
+            duration: 800,
+            delay: anime.stagger(100),
+            easing: 'easeOutQuad'
         });
     });
     /*]]>*/

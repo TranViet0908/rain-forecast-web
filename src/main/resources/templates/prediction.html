@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dự báo mưa Miền Trung - AI Forecast</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3/lib/anime.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <style>
+    /* --- 1. HERO SECTION (Đã thay ảnh nền mới) --- */
+    .cinematic-hero {
+      position: relative;
+      padding: 6rem 2rem;
+      border-radius: 24px;
+      margin-bottom: 3rem;
+      overflow: hidden;
+      color: white;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+      min-height: 400px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      isolation: isolate;
+    }
+
+    .hero-bg-static {
+        position: absolute; inset: 0; z-index: -1;
+        /* Ảnh mới: Bầu trời bão từ không gian nhìn rất công nghệ */
+        background: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1920&auto=format&fit=crop') center/cover;
+        filter: brightness(0.5); /* Tối hơn chút để chữ nổi bần bật */
+    }
+
+    .hero-content-box { position: relative; z-index: 1; max-width: 800px; margin: 0 auto; }
+
+    .hero-title-new { font-size: 3rem; font-weight: 800; margin-bottom: 1rem; text-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+    .hero-desc-new { font-size: 1.2rem; opacity: 0.9; }
+
+    /* --- 2. FORM SECTION (Nâng cấp) --- */
+    .form-section {
+      position: relative;
+      border-radius: 24px;
+      padding: 2.5rem;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      border: 1px solid rgba(255,255,255,0.2);
+      isolation: isolate;
+      min-height: 550px;
+      transition: all 0.3s ease;
+    }
+
+    /* Lớp nền động của Form */
+    .form-bg-layer {
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background-size: cover;
+      background-position: center;
+      transition: background 0.6s ease-in-out; /* Chuyển đổi mượt mà */
+      filter: brightness(0.4); /* Làm tối ảnh khi có ảnh */
+    }
+
+    /* Chữ trong Form */
+    .form-title {
+      font-size: 1.5rem; font-weight: 800; color: white; margin-bottom: 2rem;
+      display: flex; align-items: center; gap: 0.75rem;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .lbl {
+      color: white;
+      font-weight: 600;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+      margin-bottom: 0.5rem; display: block;
+    }
+
+    /* Input Styles */
+    .inp, select {
+      background: rgba(255, 255, 255, 0.95); /* Trắng đục hơn để dễ đọc */
+      border: none;
+      backdrop-filter: blur(5px);
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .inp:focus, select:focus {
+      background: white;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.5); /* Focus màu xanh rõ hơn */
+    }
+
+    /* --- LAYOUT & UTILS --- */
+    .split-layout { display: grid; grid-template-columns: 420px 1fr; gap: 2rem; }
+    .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
+    .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 2rem; }
+
+    /* Result Area */
+    .weather-window {
+      position: relative; border-radius: 24px; overflow: hidden; height: 100%; min-height: 500px;
+      background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      color: white; box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    }
+    .big-temp { font-size: 5rem; font-weight: 800; line-height: 1; text-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+    .weather-status { font-size: 1.5rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
+
+    @media (max-width: 1024px) { .split-layout { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+
+<main class="app-container">
+
+  <section class="cinematic-hero">
+    <div class="hero-bg-static"></div>
+    <div class="hero-content-box">
+      <div class="hero-badge" style="display:inline-block; padding:0.5rem 1rem; background:rgba(255,255,255,0.1); border-radius:50px; border:1px solid rgba(255,255,255,0.2); backdrop-filter:blur(5px); margin-bottom:1rem;">
+        🤖 AI Weather Model v2.0
+      </div>
+      <h1 class="hero-title-new">Dự Báo Lượng Mưa</h1>
+      <p class="hero-desc-new">
+        Nhập thông số khí tượng hoặc dữ liệu vệ tinh để nhận kết quả dự báo lượng mưa trong 24h tới với độ chính xác cao.
+      </p>
+    </div>
+  </section>
+
+  <div class="split-layout">
+
+    <div class="form-section">
+      <div id="form-bg" class="form-bg-layer"
+           style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); filter: none;">
+      </div>
+
+      <h2 class="form-title">⚡ Thông số đầu vào</h2>
+
+      <form id="predictForm">
+        <div class="form-group">
+          <label class="lbl">📍 Khu vực dự báo</label>
+          <select id="locationId" name="locationId" class="inp" required>
+            <option value="" disabled selected>-- Chọn Tỉnh/Thành phố --</option>
+            <option th:each="loc : ${locations}" th:value="${loc.id}" th:text="${loc.name}"></option>
+          </select>
+        </div>
+
+        <div class="input-grid">
+          <div class="form-group">
+            <label class="lbl">🌡️ Nhiệt độ (LST)</label>
+            <input type="number" id="lst" class="inp" step="any" placeholder="°C" required>
+          </div>
+          <div class="form-group">
+            <label class="lbl">💧 Độ ẩm (%)</label>
+            <input type="number" id="humidity" class="inp" step="any" placeholder="%" required>
+          </div>
+          <div class="form-group">
+            <label class="lbl">🌤️ Nhiệt độ KK</label>
+            <input type="number" id="temperature" class="inp" step="any" placeholder="°C" required>
+          </div>
+          <div class="form-group">
+            <label class="lbl">💨 Tốc độ gió</label>
+            <input type="number" id="windSpeed" class="inp" step="any" placeholder="m/s" required>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button type="button" class="btn-modern btn-secondary" id="autoFillBtn" style="border:none; background:rgba(255,255,255,0.9); color:#1e293b;">
+            📡 Lấy dữ liệu
+          </button>
+          <button type="submit" class="btn-modern btn-primary" id="predictBtn">
+            🔮 Dự báo ngay
+          </button>
+        </div>
+
+        <button type="button" id="forecastBtn" class="btn-modern btn-primary" style="margin-top: 1rem; width:100%; background: linear-gradient(90deg, #2563eb, #06b6d4);">
+          📅 Dự báo 5 ngày tới
+        </button>
+      </form>
+    </div>
+
+    <div style="height: 100%; display: flex; flex-direction: column;">
+      <div id="emptyState" class="modern-card" style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 550px;">
+        <div style="font-size: 4rem; opacity: 0.5; margin-bottom: 1rem;">☁️</div>
+        <h3 style="font-size: 1.3rem; margin-bottom: 0.5rem; color: var(--text-main);">Sẵn sàng phân tích</h3>
+        <p style="color: var(--text-secondary);">Chọn khu vực bên trái để bắt đầu.</p>
+      </div>
+
+      <div id="resultContainer" style="height: 100%; display: none;">
+        <div id="weatherWindow" class="weather-window">
+          <div style="position: relative; z-index: 10; text-align: center; background: rgba(0,0,0,0.3); padding: 3rem; border-radius: 24px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);">
+            <div style="font-size: 0.9rem; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.8); margin-bottom: 1rem;">Kết quả phân tích AI</div>
+            <div class="big-temp">
+              <span id="rainfallValue">0</span><span style="font-size: 2.5rem; vertical-align: top; margin-left: 0.5rem;">mm</span>
+            </div>
+            <div id="weatherStatus" class="weather-status">Đang xử lý...</div>
+            <div id="weatherSub" style="margin-top: 1rem; opacity: 0.9;">...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+
+<script>
+  // 1. Map tên tỉnh với file ảnh
+  const provinceImages = {
+      'Thanh Hóa': 'samson.jpg',
+      'Nghệ An': 'quebac.jpg',
+      'Hà Tĩnh': 'hatinh.jpg',
+      'Quảng Trị': 'thanhco.jpg',
+      'Huế': 'hue.jpg',
+      'Đà Nẵng': 'cauvang.jpg',
+      'Quảng Ngãi': 'lyson.jpg',
+      'Gia Lai': 'bienho.jpg',
+      'Đắk Lắk': 'buondon.jpg',
+      'Khánh Hòa': 'nhatrang.jpg',
+      'Lâm Đồng': 'dalat.jpg'
+  };
+
+  // 2. Hàm đổi Background cho FORM SECTION
+  function updateFormBackground() {
+      const select = document.getElementById('locationId');
+      const bgElement = document.getElementById('form-bg');
+
+      // Kiểm tra xem người dùng đã chọn chưa (Value rỗng hoặc index 0)
+      if (!select || select.value === "") {
+          // [DEFAULT STATE] Dùng Gradient màu xanh đậm sạch sẽ
+          bgElement.style.backgroundImage = "linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)";
+          bgElement.style.filter = "none"; // Không cần làm tối vì gradient đã tối
+          return;
+      }
+
+      const selectedText = select.options[select.selectedIndex].text;
+      let imageName = null;
+
+      // Tìm ảnh khớp với tên tỉnh
+      for (const [key, img] of Object.entries(provinceImages)) {
+          if (selectedText.includes(key)) {
+              imageName = img;
+              break;
+          }
+      }
+
+      if (imageName) {
+          // [SELECTED STATE] Dùng ảnh tỉnh
+          bgElement.style.backgroundImage = `url('/images/${imageName}')`;
+          bgElement.style.filter = "brightness(0.4)"; // Làm tối ảnh để chữ trắng nổi bật
+      } else {
+          // Fallback nếu không tìm thấy ảnh (Dùng Gradient)
+          bgElement.style.backgroundImage = "linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)";
+          bgElement.style.filter = "none";
+      }
+  }
+
+  // 3. Gán sự kiện
+  document.addEventListener('DOMContentLoaded', () => {
+      const locationSelect = document.getElementById('locationId');
+      const autoFillBtn = document.getElementById('autoFillBtn');
+
+      if(locationSelect) {
+          locationSelect.addEventListener('change', updateFormBackground);
+      }
+      if(autoFillBtn) {
+          autoFillBtn.addEventListener('click', updateFormBackground);
+      }
+
+      // Gọi 1 lần khi load trang để set đúng trạng thái mặc định
+      updateFormBackground();
+
+      // Animation vào trang
+      anime({
+          targets: '.form-section',
+          translateX: [-30, 0],
+          opacity: [0, 1],
+          duration: 800,
+          easing: 'easeOutQuad'
+      });
+  });
+</script>
+
+<script src="/js/dashboard.js"></script>
+</body>
+git push -u origin main --force

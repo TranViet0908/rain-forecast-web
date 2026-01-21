@@ -1,18 +1,29 @@
 import pandas as pd
 import numpy as np
-from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_absolute_error, r2_score, accuracy_score
-from sklearn.utils import resample
 import joblib
 import os
 import warnings
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, r2_score, mean_squared_error
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.utils import resample
+
+# TensorFlow / Keras cho LSTM
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense, Dropout
+from tensorflow.keras.optimizers import Adam
 
 warnings.filterwarnings('ignore')
 
+# CẤU HÌNH
 DATA_FILE = 'weather_data_1984_2024.csv'
-MODEL_PATH = 'random_forest_model.pkl'
+MODEL_DIR = 'models' # Thư mục chứa model
+if not os.path.exists(MODEL_DIR):
+    os.makedirs(MODEL_DIR)
 
+# Mapping tọa độ (Để tính đặc trưng địa lý)
 LOCATIONS_COORDS = {
     "Thanh Hoa": {"lat": 19.807, "lon": 105.776},
     "Nghe An": {"lat": 18.673, "lon": 105.676},
@@ -28,35 +39,67 @@ LOCATIONS_COORDS = {
 }
 
 def prepare_data(df):
+    """
+    Tiền xử lý dữ liệu và tạo các đặc trưng vật lý (Feature Engineering)
+    Khớp với Chương 2 Báo cáo
+    """
     df['date'] = pd.to_datetime(df['date'].astype(str), format='%Y%m%d', errors='coerce')
     df = df.sort_values(by=['location_name', 'date'])
 
-    # Feature Engineering (Vật lý & LST)
+    # 1. Tính toán các chỉ số vật lý
+    # Công thức Magnus cải tiến cho Dew Point
     a, b = 17.27, 237.7
-    df['dew_point'] = (b * ((a * df['temperature']) / (b + df['temperature']) + np.log(df['humidity'] / 100.0))) / (a - ((a * df['temperature']) / (b + df['temperature']) + np.log(df['humidity'] / 100.0)))
+    df['dew_point'] = (b * ((a * df['temperature']) / (b + df['temperature']) + np.log(df['humidity'] / 100.0))) / \
+                      (a - ((a * df['temperature']) / (b + df['temperature']) + np.log(df['humidity'] / 100.0)))
 
     df['lst_minus_temp'] = df['lst'] - df['temperature']
-    df['heat_index'] = df['temperature'] * df['humidity']
+    df['heat_index'] = df['temperature'] * df['humidity'] # Công thức giản lược
 
+    # 2. Tạo đặc trưng trễ (Lag Features) - Quan trọng cho LSTM & RF
     df['rain_lag_1'] = df.groupby('location_name')['rainfall'].shift(1).fillna(0)
     df['rain_mean_3d'] = df.groupby('location_name')['rainfall'].transform(lambda x: x.rolling(3).mean().shift(1)).fillna(0)
 
     df['temp_change'] = df.groupby('location_name')['temperature'].diff().fillna(0)
     df['hum_change'] = df.groupby('location_name')['humidity'].diff().fillna(0)
 
+    # 3. Mã hóa thời gian (Cyclical Encoding)
     df['day_sin'] = np.sin(2 * np.pi * df['date'].dt.dayofyear / 365.0)
     df['day_cos'] = np.cos(2 * np.pi * df['date'].dt.dayofyear / 365.0)
+
+    # 4. Gán tọa độ
     df['lat'] = df['location_name'].map(lambda x: LOCATIONS_COORDS.get(x, {}).get('lat', 0))
     df['lon'] = df['location_name'].map(lambda x: LOCATIONS_COORDS.get(x, {}).get('lon', 0))
 
     return df.dropna()
 
+def build_lstm_model(input_shape):
+    """
+    Kiến trúc mạng LSTM đề xuất (Khớp Báo cáo mục 2.2.2)
+    """
+    model = Sequential()
+    # LSTM Layer 1: Return sequences để giữ thông tin chuỗi
+    model.add(LSTM(64, activation='relu', return_sequences=True, input_shape=input_shape))
+    model.add(Dropout(0.2)) # Chống Overfitting
+
+    # LSTM Layer 2
+    model.add(LSTM(32, activation='relu'))
+
+    # Output Layer
+    model.add(Dense(1)) # Dự báo 1 giá trị (Lượng mưa)
+
+    model.compile(optimizer=Adam(learning_rate=0.001), loss='mse')
+    return model
+
 def train():
-    print("--> [1] Loading Data...")
-    if not os.path.exists(DATA_FILE): return
+    print("--> [1] Loading & Preprocessing Data...")
+    if not os.path.exists(DATA_FILE):
+        print(f"Lỗi: Không tìm thấy file {DATA_FILE}")
+        return
+
     df = pd.read_csv(DATA_FILE)
     df = prepare_data(df)
 
+    # Danh sách đặc trưng (Feature List) - 15 features
     features = [
         'lst', 'humidity', 'temperature', 'wind_speed',
         'lat', 'lon', 'day_sin', 'day_cos',
@@ -65,70 +108,85 @@ def train():
     ]
     target = 'rainfall'
 
-    # ---------------------------------------------------------
-    # GIAI ĐOẠN 1: MÔ HÌNH HỖ TRỢ (RF CLASSIFIER)
-    # Nhiệm vụ: Chỉ xác định MƯA (1) hay KHÔNG MƯA (0)
-    # ---------------------------------------------------------
-    print("--> [2] Training Support Model (RF Classifier)...")
+    # =========================================================================
+    # GIAI ĐOẠN 1: HUẤN LUYỆN GATEKEEPER (RANDOM FOREST CLASSIFIER)
+    # =========================================================================
+    print("--> [2] Training Gatekeeper (Random Forest)...")
 
-    # Tạo nhãn: Mưa > 0.1mm là có mưa
+    # Label: Mưa > 0.1mm là 1 (Có mưa), ngược lại là 0
     y_class = (df[target] > 0.1).astype(int)
 
     X_train_c, X_test_c, y_train_c, y_test_c = train_test_split(df[features], y_class, test_size=0.2, random_state=42)
 
-    # Class_weight='balanced' giúp nó chú ý kỹ đến ngày mưa (vốn ít hơn ngày nắng)
     rf_classifier = RandomForestClassifier(n_estimators=100, max_depth=15, class_weight='balanced', random_state=42, n_jobs=-1)
     rf_classifier.fit(X_train_c, y_train_c)
 
-    acc = accuracy_score(y_test_c, rf_classifier.predict(X_test_c))
-    print(f"    + Accuracy (Phân loại): {acc*100:.2f}%")
+    print(f"    + Gatekeeper Accuracy: {accuracy_score(y_test_c, rf_classifier.predict(X_test_c))*100:.2f}%")
 
-    # ---------------------------------------------------------
-    # GIAI ĐOẠN 2: MÔ HÌNH CHÍNH (RF REGRESSOR)
-    # Nhiệm vụ: Dự báo CHÍNH XÁC lượng mưa (khi biết trời sẽ mưa)
-    # ---------------------------------------------------------
-    print("--> [3] Training Main Model (RF Regressor)...")
+    # =========================================================================
+    # GIAI ĐOẠN 2: HUẤN LUYỆN SPECIALIST (LSTM)
+    # =========================================================================
+    print("--> [3] Training Specialist (LSTM)...")
 
-    # Lọc: Chỉ lấy những ngày CÓ MƯA để train cho Main Model
-    # Điều này giúp model "Chuyên gia" không bị nhiễu bởi ngày nắng
-    rainy_df = df[df[target] > 0.1]
+    # Lọc dữ liệu: Chỉ lấy các ngày CÓ MƯA để train LSTM (để nó học cách dự báo lượng mưa)
+    rainy_df = df[df[target] > 0.1].copy()
 
-    # Upsampling: Nhân bản các cơn bão/mưa to để model học kỹ
-    heavy_rain = rainy_df[rainy_df[target] > 20]
+    # --- Kỹ thuật Upsampling (Xử lý mất cân bằng) ---
+    # Nhân bản dữ liệu mưa to để LSTM học kỹ hơn các tình huống bão
+    heavy_rain = rainy_df[rainy_df[target] > 25]
     extreme_rain = rainy_df[rainy_df[target] > 50]
 
-    # Nhân dữ liệu bão lên gấp 5 và 10 lần
-    heavy_upsampled = resample(heavy_rain, replace=True, n_samples=len(heavy_rain)*20, random_state=42)
-    extreme_upsampled = resample(extreme_rain, replace=True, n_samples=len(extreme_rain)*100, random_state=42)
+    heavy_upsampled = resample(heavy_rain, replace=True, n_samples=len(heavy_rain)*10, random_state=42)
+    extreme_upsampled = resample(extreme_rain, replace=True, n_samples=len(extreme_rain)*50, random_state=42)
 
-    # Gộp lại thành tập train chuyên sâu
-    final_rainy_df = pd.concat([rainy_df, heavy_upsampled, extreme_upsampled])
+    final_train_df = pd.concat([rainy_df, heavy_upsampled, extreme_upsampled])
 
-    X_reg = final_rainy_df[features]
-    y_reg = np.log1p(final_rainy_df[target]) # Log transform
+    # Chuẩn bị dữ liệu cho LSTM
+    X_reg = final_train_df[features].values
+    # Log transform target để giảm độ lệch (skewness)
+    y_reg = np.log1p(final_train_df[target].values)
 
-    X_train_r, X_test_r, y_train_r, y_test_r = train_test_split(X_reg, y_reg, test_size=0.1, random_state=42)
+    # Scaling (CỰC KỲ QUAN TRỌNG VỚI LSTM)
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    X_reg_scaled = scaler.fit_transform(X_reg)
 
-    rf_regressor = RandomForestRegressor(n_estimators=300, max_depth=30, random_state=42, n_jobs=-1)
-    rf_regressor.fit(X_train_r, y_train_r)
+    # Reshape input cho LSTM: [samples, time_steps, features]
+    # Ở đây dùng time_steps=1 vì dữ liệu web gửi lên là từng dòng đơn lẻ
+    X_reg_reshaped = X_reg_scaled.reshape((X_reg_scaled.shape[0], 1, X_reg_scaled.shape[1]))
 
-    # Đánh giá trên tập test gốc (chưa upsample) của những ngày mưa
-    X_test_orig = rainy_df[features]
-    y_test_orig = rainy_df[target]
-    y_pred_orig = np.expm1(rf_regressor.predict(X_test_orig))
+    # Split
+    X_train_l, X_test_l, y_train_l, y_test_l = train_test_split(X_reg_reshaped, y_reg, test_size=0.1, random_state=42)
 
-    r2 = r2_score(y_test_orig, y_pred_orig)
-    print(f"    + R2 Score (Độ chính xác lượng mưa): {r2:.4f}")
+    # Build & Train LSTM
+    lstm_model = build_lstm_model(input_shape=(1, len(features)))
 
-    # ---------------------------------------------------------
-    # LƯU CẢ 2 MÔ HÌNH VÀO 1 FILE
-    # ---------------------------------------------------------
-    print(f"--> [4] Saving Hybrid RF System to {MODEL_PATH}")
-    models = {
-        'gatekeeper': rf_classifier, # Model hỗ trợ
-        'specialist': rf_regressor   # Model chính
-    }
-    joblib.dump(models, MODEL_PATH)
+    # Train
+    history = lstm_model.fit(
+        X_train_l, y_train_l,
+        epochs=30, # Số vòng lặp
+        batch_size=64,
+        validation_split=0.1,
+        verbose=1
+    )
+
+    # Đánh giá sơ bộ
+    y_pred_log = lstm_model.predict(X_test_l)
+    r2 = r2_score(y_test_l, y_pred_log)
+    print(f"    + Specialist (LSTM) R2 Score (Log space): {r2:.4f}")
+
+    # =========================================================================
+    # LƯU TRỮ MODEL
+    # =========================================================================
+    print("--> [4] Saving Models...")
+
+    # 1. Lưu RF và Scaler bằng Joblib
+    joblib.dump(rf_classifier, os.path.join(MODEL_DIR, 'rf_gatekeeper.pkl'))
+    joblib.dump(scaler, os.path.join(MODEL_DIR, 'scaler.pkl'))
+
+    # 2. Lưu LSTM bằng Keras format (.h5 hoặc .keras)
+    lstm_model.save(os.path.join(MODEL_DIR, 'lstm_specialist.h5'))
+
+    print("✅ Training Complete! All models saved in 'models/' directory.")
 
 if __name__ == "__main__":
     train()

@@ -1,168 +1,295 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dự báo mưa Miền Trung - AI Forecast</title>
-    <link rel="stylesheet" href="/css/style.css">
-    <!-- Thư viện SweetAlert2 cho Popup đẹp -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/animejs@3/lib/anime.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trang chủ - RainAI System</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+
+  <style>
+    /* --- HERO SECTION (NEW BACKGROUND) --- */
+    .cinematic-hero {
+        position: relative;
+        padding: 8rem 2rem;
+        margin-bottom: 3rem;
+        border-radius: 24px;
+        overflow: hidden;
+        color: white;
+        text-align: center;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        min-height: 550px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        isolation: isolate;
+    }
+
+    /* Ảnh nền mới: Bầu trời bão kịch tính */
+    .hero-bg-layer {
+        position: absolute; inset: 0; z-index: -2;
+        /* Ảnh Unsplash: Stormy Coast */
+        background: url('https://images.unsplash.com/photo-1504608524841-42fe6f032b4b?q=80&w=1920&auto=format&fit=crop') center/cover no-repeat;
+        filter: brightness(0.6) contrast(1.1);
+        transition: transform 10s ease;
+    }
+
+    .cinematic-hero:hover .hero-bg-layer { transform: scale(1.05); }
+
+    .hero-content-box { max-width: 900px; position: relative; z-index: 1; }
+
+    .hero-title-new {
+        font-size: 3.5rem; font-weight: 800; margin-bottom: 1.5rem;
+        text-shadow: 0 4px 15px rgba(0,0,0,0.6); line-height: 1.1; letter-spacing: -1px;
+    }
+
+    .hero-desc-new {
+        font-size: 1.25rem; color: rgba(255, 255, 255, 0.95); margin-bottom: 2.5rem;
+        font-weight: 500; text-shadow: 0 2px 4px rgba(0,0,0,0.5); max-width: 700px; margin-left: auto; margin-right: auto;
+    }
+
+    /* --- PROVINCE CARDS --- */
+    .forecast-grid {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;
+    }
+
+    .province-card {
+        position: relative; height: 300px; border-radius: 20px; overflow: hidden;
+        color: white; cursor: pointer; transition: all 0.4s ease;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+        display: flex; flex-direction: column; justify-content: flex-end; padding: 1.5rem;
+    }
+
+    .province-bg {
+        position: absolute; inset: 0; background-size: cover; background-position: center;
+        transition: transform 0.6s ease; z-index: 0;
+    }
+
+    .province-overlay {
+        position: absolute; inset: 0; z-index: 1;
+        background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.3) 60%, rgba(0,0,0,0) 100%);
+    }
+
+    .province-info { position: relative; z-index: 2; }
+
+    .province-card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.3); }
+    .province-card:hover .province-bg { transform: scale(1.1); }
+
+    .temp-badge {
+        position: absolute; top: 1rem; right: 1rem; z-index: 2;
+        background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(8px);
+        padding: 6px 12px; border-radius: 50px; font-weight: 700; border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    /* --- SAFETY GUIDE --- */
+    .guide-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; margin-top: 2rem; }
+    .guide-card {
+        background: white; padding: 2rem; border-radius: 16px; border: 1px solid #e2e8f0;
+        text-align: center; transition: all 0.3s;
+    }
+    .guide-card:hover { border-color: #2563eb; transform: translateY(-5px); box-shadow: 0 10px 30px rgba(37, 99, 235, 0.1); }
+    .guide-icon { font-size: 3rem; margin-bottom: 1rem; display: block; }
+
+    /* --- SATELLITE --- */
+    .satellite-box {
+        position: relative; border-radius: 24px; overflow: hidden; height: 450px;
+        display: flex; align-items: center; justify-content: center;
+        margin-top: 5rem; color: white; text-align: center;
+        box-shadow: 0 20px 50px rgba(15, 23, 42, 0.3);
+    }
+    .sat-bg {
+        position: absolute; inset: 0;
+        background: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1920') center/cover;
+        filter: brightness(0.6); transition: transform 10s ease;
+    }
+    .satellite-box:hover .sat-bg { transform: scale(1.05); }
+    .sat-content { position: relative; z-index: 2; max-width: 600px; padding: 2rem; }
+
+    @media(max-width: 768px) {
+        .hero-title-new { font-size: 2.2rem; }
+        .guide-grid { grid-template-columns: 1fr; }
+        .cinematic-hero { padding: 4rem 1.5rem; min-height: 400px; }
+    }
+  </style>
 </head>
+
 <body>
-<!-- Header dùng cú pháp mới -->
 <div th:replace="~{fragments/header :: header}"></div>
 
 <main class="app-container">
-    <div class="page-hero">
-        <h1 class="hero-title">Dự Báo Lượng Mưa AI</h1>
-        <p class="hero-desc">Sử dụng Machine Learning & Dữ liệu vệ tinh LST</p>
 
-        <!-- [ĐÃ SỬA] NÚT ĐĂNG KÝ NHẬN TIN - Dùng class btn-hero-action -->
-        <button onclick="openSubscribeModal()" class="btn-hero-action">
-            <span>🔔</span> Đăng ký nhận cảnh báo qua Email
-        </button>
+  <section class="cinematic-hero">
+    <div class="hero-bg-layer"></div>
+    <div class="hero-content-box">
+      <div style="display: inline-block; padding: 0.5rem 1rem; border: 1px solid rgba(255,255,255,0.3); border-radius: 50px; background: rgba(255,255,255,0.1); backdrop-filter: blur(5px); margin-bottom: 1.5rem; font-weight: 600; font-size: 0.9rem;">
+        🇻🇳 Hệ thống Dự báo Mưa Miền Trung
+      </div>
+      <h1 class="hero-title-new">Chủ Động Ứng Phó <br> Trước Mọi Cơn Bão</h1>
+      <p class="hero-desc-new">
+        Công nghệ AI kết hợp dữ liệu vệ tinh LST mang đến cảnh báo sớm, chính xác cho 11 tỉnh thành duyên hải Miền Trung.
+      </p>
+
+      <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <a href="/prediction" class="btn-hero-action" style="background: #2563eb; color: white; border: none; padding: 1rem 2.5rem; font-size: 1.1rem; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.5);">
+          ⚡ Dự báo ngay
+        </a>
+        <a href="#forecast" class="btn-hero-action" style="background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); backdrop-filter: blur(10px); padding: 1rem 2.5rem; font-size: 1.1rem;">
+          Xem các tỉnh
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section id="forecast">
+    <div style="display: flex; justify-content: space-between; align-items: end; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h2 style="font-size: 2rem; color: #0f172a; margin-bottom: 0.5rem; font-weight: 800;">Thời tiết 11 Tỉnh Thành</h2>
+        <p style="color: #64748b;">Cập nhật realtime. Ảnh nền là địa danh đặc trưng của từng tỉnh.</p>
+      </div>
+      <div class="filter-section" style="margin: 0;">
+        <button class="filter-btn active" onclick="filterForecast('all', this)">Tất cả</button>
+        <button class="filter-btn" onclick="filterForecast('high', this)">⚠️ Mưa to</button>
+        <button class="filter-btn" onclick="filterForecast('safe', this)">☀️ Tạnh ráo</button>
+      </div>
     </div>
 
-    <div class="split-layout">
-        <!-- KHỐI TRÁI: FORM NHẬP LIỆU -->
-        <div class="modern-card">
-            <h2 style="font-size: 1.25rem; margin-bottom: 1.5rem; color: #1e293b;">⚡ Dữ liệu đầu vào</h2>
+    <div class="forecast-grid">
+      <div class="province-card js-card"
+           th:each="item : ${forecasts}"
+           th:data-rain="${item.predictedRainfall}"
+           th:onclick="'window.location.href=\'/api/forecast?locationId=' + ${item.location.id} + '\''">
 
-            <form id="predictForm">
-                <div class="form-group">
-                    <label class="lbl">Khu vực dự báo</label>
-                    <div style="position: relative;">
-                        <select id="locationId" name="locationId" class="inp" required>
-                            <option value="" disabled selected>-- Chọn Tỉnh/Thành phố --</option>
-                            <option th:each="loc : ${locations}" th:value="${loc.id}" th:text="${loc.name}"></option>
-                        </select>
-                    </div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                    <div class="form-group">
-                        <label class="lbl">Nhiệt độ (LST)</label>
-                        <input type="number" id="lst" class="inp" step="any" placeholder="°C" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="lbl">Độ ẩm (%)</label>
-                        <input type="number" id="humidity" class="inp" step="any" placeholder="%" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="lbl">Nhiệt độ KK</label>
-                        <input type="number" id="temperature" class="inp" step="any" placeholder="°C" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="lbl">Tốc độ gió</label>
-                        <input type="number" id="windSpeed" class="inp" step="any" placeholder="m/s" required>
-                    </div>
-                </div>
-
-                <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem;">
-                    <button type="button" class="btn-modern btn-secondary" id="autoFillBtn">
-                        📡 Lấy dữ liệu thời tiết hiện tại
-                    </button>
-                    <button type="submit" class="btn-modern btn-primary" id="predictBtn">
-                        🔮 Dự báo ngay
-                    </button>
-                </div>
-            </form>
+        <div class="temp-badge" th:if="${item.predictionFeature != null}">
+          <span th:text="${item.predictionFeature.inputTemp}">--</span>°C
         </div>
 
-        <!-- KHỐI PHẢI: KẾT QUẢ -->
-        <div style="height: 100%;">
-            <div id="emptyState" class="modern-card" style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; opacity: 0.7;">
-                <img src="https://cdn-icons-png.flaticon.com/512/1163/1163624.png" width="100" style="margin-bottom: 1rem; opacity: 0.5;" alt="Cloud">
-                <h3 style="color: var(--text-gray);">Chưa có dữ liệu</h3>
-                <p>Nhập thông số bên trái để bắt đầu mô phỏng</p>
-            </div>
-
-            <div id="resultContainer" style="height: 100%; display: none;">
-                <div id="weatherWindow" class="weather-window weather-clear">
-                    <div class="weather-content">
-                        <div style="font-size: 0.9rem; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 0.5rem;">Dự báo lượng mưa</div>
-                        <div class="big-temp">
-                            <span id="rainfallValue">0</span><span style="font-size: 2rem; vertical-align: top;">mm</span>
-                        </div>
-                        <div id="weatherStatus" class="weather-status">Đang xử lý...</div>
-                        <div id="weatherSub" class="weather-sub">...</div>
-                    </div>
-                </div>
-            </div>
+        <div class="province-bg"
+             th:style="'background-image: url(' + ${
+                        item.location.name.contains('Thanh Hóa') ? '/images/samson.jpg' :
+                        item.location.name.contains('Nghệ An') ? '/images/quebac.jpg' :
+                        item.location.name.contains('Hà Tĩnh') ? '/images/hatinh.jpg' :
+                        item.location.name.contains('Quảng Trị') ? '/images/thanhco.jpg' :
+                        item.location.name.contains('Huế') ? '/images/hue.jpg' :
+                        item.location.name.contains('Đà Nẵng') ? '/images/cauvang.jpg' :
+                        item.location.name.contains('Quảng Ngãi') ? '/images/lyson.jpg' :
+                        item.location.name.contains('Gia Lai') ? '/images/bienho.jpg' :
+                        item.location.name.contains('Đắk Lắk') ? '/images/buondon.jpg' :
+                        item.location.name.contains('Khánh Hòa') ? '/images/nhatrang.jpg' :
+                        item.location.name.contains('Lâm Đồng') ? '/images/dalat.jpg' :
+                        '/images/default_rain.jpg'
+                     } + ');'">
         </div>
+
+        <div class="province-overlay"></div>
+
+        <div class="province-info">
+          <h3 th:text="${item.location.name}" style="font-size: 1.6rem; margin-bottom: 0.2rem; font-weight: 800; text-shadow: 0 2px 10px rgba(0,0,0,0.8);">Tên Tỉnh</h3>
+          <p style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 1rem;">Miền Trung</p>
+
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <span style="font-size: 2.5rem; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));">
+                <span th:if="${item.predictedRainfall == 0}">🌤️</span>
+                <span th:if="${item.predictedRainfall > 0 and item.predictedRainfall <= 16}">🌦️</span>
+                <span th:if="${item.predictedRainfall > 16 and item.predictedRainfall <= 50}">🌧️</span>
+                <span th:if="${item.predictedRainfall > 50}">⛈️</span>
+            </span>
+
+            <div>
+              <div style="font-size: 0.75rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">Dự báo 24h</div>
+              <div style="font-size: 1.6rem; font-weight: 800; color: #60a5fa; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">
+                <span th:text="${#numbers.formatDecimal(item.predictedRainfall, 1, 1)}">0.0</span> mm
+              </div>
+            </div>
+          </div>
+
+          <div th:if="${item.predictedRainfall > 50}" style="margin-top: 1rem;">
+            <span style="background: #ef4444; color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.5); display: inline-block;">
+                ⚠️ CẢNH BÁO MƯA LỚN
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div th:if="${#lists.isEmpty(forecasts)}" style="grid-column: 1/-1; text-align: center; padding: 4rem; background: #f8fafc; border-radius: 16px;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">📭</div>
+        <p style="color: #64748b; font-size: 1.1rem;">Chưa có dữ liệu dự báo. Vui lòng chạy mô hình dự báo.</p>
+        <a href="/prediction" class="btn-modern btn-primary" style="margin-top: 1rem; display: inline-block;">Đến trang dự báo</a>
+      </div>
     </div>
+  </section>
+
+  <section id="safety-guide" style="margin-top: 6rem;">
+    <div style="text-align: center; max-width: 700px; margin: 0 auto 3rem auto;">
+      <span style="color: #2563eb; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; font-size: 0.9rem;">Survival Guide</span>
+      <h2 style="font-size: 2.2rem; color: #0f172a; margin: 0.5rem 0 1rem 0; font-weight: 800;">Kỹ Năng Ứng Phó Thiên Tai</h2>
+      <p style="color: #475569; font-size: 1.1rem;">Chuẩn bị kỹ lưỡng là chìa khóa để bảo vệ an toàn cho bản thân và gia đình.</p>
+    </div>
+
+    <div class="guide-grid">
+      <div class="guide-card">
+        <span class="guide-icon">🏠</span>
+        <h3 style="margin-bottom: 0.8rem; color: #1e293b; font-weight: 700;">Trước khi bão đến</h3>
+        <p style="font-size: 0.95rem; color: #64748b; line-height: 1.6;">Gia cố mái nhà, cửa sổ. Chuẩn bị túi khẩn cấp (đèn pin, thuốc, lương khô). Xác định nơi sơ tán an toàn.</p>
+        <a href="/safety" style="color: #2563eb; font-weight: 600; font-size: 0.9rem; margin-top: 1.5rem; display: inline-block;">Xem checklist chi tiết &rarr;</a>
+      </div>
+      <div class="guide-card">
+        <span class="guide-icon">⚡</span>
+        <h3 style="margin-bottom: 0.8rem; color: #1e293b; font-weight: 700;">Trong cơn bão</h3>
+        <p style="font-size: 0.95rem; color: #64748b; line-height: 1.6;">Ở yên trong nhà, tránh xa cửa kính. Ngắt nguồn điện nếu nước tràn vào. Theo dõi tin tức liên tục.</p>
+        <a href="/safety" style="color: #2563eb; font-weight: 600; font-size: 0.9rem; margin-top: 1.5rem; display: inline-block;">Kỹ năng sinh tồn &rarr;</a>
+      </div>
+      <div class="guide-card">
+        <span class="guide-icon">⛑️</span>
+        <h3 style="margin-bottom: 0.8rem; color: #1e293b; font-weight: 700;">Sau bão lũ</h3>
+        <p style="font-size: 0.95rem; color: #64748b; line-height: 1.6;">Kiểm tra nguồn nước uống. Dọn dẹp vệ sinh phòng dịch bệnh. Cẩn thận với dây điện đứt và cây đổ.</p>
+        <a href="/safety" style="color: #2563eb; font-weight: 600; font-size: 0.9rem; margin-top: 1.5rem; display: inline-block;">Phục hồi sau bão &rarr;</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="satellite-box">
+    <div class="sat-bg"></div>
+    <div class="sat-content">
+      <h2 style="font-size: 2.8rem; margin-bottom: 1rem; font-weight: 800; text-shadow: 0 4px 10px rgba(0,0,0,0.5);">Góc Nhìn Từ Vệ Tinh</h2>
+      <p style="font-size: 1.2rem; margin-bottom: 2.5rem; color: rgba(255,255,255,0.9); max-width: 600px; margin-left: auto; margin-right: auto;">
+        Quan sát trực quan vùng mây đối lưu và nhiệt độ bề mặt đất (LST) trên bản đồ số tương tác thời gian thực.
+      </p>
+      <a href="/map" class="btn-hero-action" style="background: white; color: #0f172a; border: none; padding: 1rem 2.5rem; font-weight: 700;">
+        🌍 Mở bản đồ vệ tinh
+      </a>
+    </div>
+  </section>
+
 </main>
 
 <div th:replace="~{fragments/footer :: footer}"></div>
-<script src="/js/dashboard.js"></script>
 
-<!-- SCRIPT XỬ LÝ ĐĂNG KÝ EMAIL -->
 <script>
-    async function openSubscribeModal() {
-        const optionsHtml = document.getElementById('locationId').innerHTML;
+  function filterForecast(type, btnElement) {
+      document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+      btnElement.classList.add('active');
 
-        const { value: formValues } = await Swal.fire({
-            title: '📡 Đăng ký cảnh báo sớm',
-            html: `
-                <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 15px;">Hệ thống sẽ gửi Email cho bạn khi dự báo có mưa lớn (>50mm) tại khu vực bạn chọn.</p>
-                <input id="swal-email" class="swal2-input" placeholder="Nhập Email của bạn" type="email">
-                <select id="swal-loc" class="swal2-select" style="width: 80%; margin-top: 15px;">
-                    ${optionsHtml}
-                </select>
-            `,
-            focusConfirm: false,
-            showCancelButton: true,
-            confirmButtonText: 'Đăng Ký Ngay',
-            cancelButtonText: 'Hủy',
-            confirmButtonColor: '#0ea5e9',
-            preConfirm: () => {
-                const email = document.getElementById('swal-email').value;
-                const locId = document.getElementById('swal-loc').value;
+      const cards = document.querySelectorAll('.js-card');
+      let visibleCount = 0;
 
-                if (!email || !email.includes('@')) {
-                    Swal.showValidationMessage('Vui lòng nhập Email hợp lệ');
-                    return false;
-                }
-                if (!locId) {
-                    Swal.showValidationMessage('Vui lòng chọn khu vực');
-                    return false;
-                }
-                return { email: email, locId: locId }
-            }
-        });
+      cards.forEach(card => {
+          const rain = parseFloat(card.getAttribute('data-rain'));
+          let isVisible = false;
 
-        if (formValues) {
-            try {
-                const formData = new FormData();
-                formData.append('email', formValues.email);
-                formData.append('locationId', formValues.locId);
+          if (type === 'all') isVisible = true;
+          else if (type === 'high' && rain > 50) isVisible = true;
+          else if (type === 'safe' && rain <= 16) isVisible = true;
 
-                Swal.showLoading();
-
-                const res = await fetch('/api/notify/subscribe', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (res.ok) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Đăng ký thành công!',
-                        text: 'Bạn sẽ nhận được email cảnh báo khi trời mưa to.',
-                        timer: 3000
-                    });
-                } else {
-                    const errData = await res.json();
-                    Swal.fire('Lỗi', errData.error || 'Có lỗi xảy ra', 'error');
-                }
-            } catch (e) {
-                console.error(e);
-                Swal.fire('Lỗi kết nối', 'Không thể kết nối đến máy chủ', 'error');
-            }
-        }
-    }
+          if (isVisible) {
+              card.style.display = 'flex';
+              visibleCount++;
+          } else {
+              card.style.display = 'none';
+          }
+      });
+  }
 </script>
+
 </body>
 </html>

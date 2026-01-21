@@ -1,13 +1,16 @@
 import logging
 import sys
 import os
-from flask import Flask, request, jsonify
-import pandas as pd
 import joblib
 import numpy as np
+import pandas as pd
+from flask import Flask, request, jsonify
 from datetime import datetime
 
-# Fix font Windows
+# Import Keras để load LSTM
+from tensorflow.keras.models import load_model
+
+# Setup Logging
 if sys.platform.startswith('win'):
     try:
         sys.stdout.reconfigure(encoding='utf-8')
@@ -18,11 +21,18 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', hand
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-MODEL_PATH = 'random_forest_model.pkl'
+
+# ĐƯỜNG DẪN FILE
+MODEL_DIR = 'models'
+RF_PATH = os.path.join(MODEL_DIR, 'rf_gatekeeper.pkl')
+LSTM_PATH = os.path.join(MODEL_DIR, 'lstm_specialist.h5')
+SCALER_PATH = os.path.join(MODEL_DIR, 'scaler.pkl')
 DATA_FILE = 'weather_data_1984_2024.csv'
 
-gatekeeper = None
-specialist = None
+# Biến toàn cục chứa Models
+rf_gatekeeper = None
+lstm_specialist = None
+scaler = None
 history_df = None
 
 # Mapping Tên
@@ -38,7 +48,7 @@ LOCATION_MAPPING = {
     "Lâm Đồng (Gộp - Phan Thiết)": "Lam Dong Gop", "Lâm Đồng": "Lam Dong Gop", "Bình Thuận": "Lam Dong Gop"
 }
 
-# Feature List (Khớp với lúc train)
+# Feature List (Phải đúng thứ tự lúc train)
 FEATURES = [
     'lst', 'humidity', 'temperature', 'wind_speed',
     'lat', 'lon', 'day_sin', 'day_cos',
@@ -53,53 +63,53 @@ def calculate_dew_point(T, RH):
         return (b * alpha) / (a - alpha)
     except: return T
 
-# Load
+# --- LOAD RESOURCES ---
 try:
-    if os.path.exists(MODEL_PATH):
-        models = joblib.load(MODEL_PATH)
-        if isinstance(models, dict):
-            gatekeeper = models.get('gatekeeper')
-            specialist = models.get('specialist')
-            logger.info("✅ Load Model OK.")
+    logger.info("⏳ Loading Models...")
+    if os.path.exists(RF_PATH):
+        rf_gatekeeper = joblib.load(RF_PATH)
+        logger.info("✅ RF Gatekeeper Loaded.")
+
+    if os.path.exists(SCALER_PATH):
+        scaler = joblib.load(SCALER_PATH)
+        logger.info("✅ Scaler Loaded.")
+
+    if os.path.exists(LSTM_PATH):
+        # Thêm compile=False để bỏ qua lỗi metric 'mse'
+        lstm_specialist = load_model(LSTM_PATH, compile=False)
+        logger.info("✅ LSTM Specialist Loaded.")
+
     if os.path.exists(DATA_FILE):
         df = pd.read_csv(DATA_FILE)
         df['date'] = pd.to_datetime(df['date'].astype(str), format='%Y%m%d', errors='coerce')
         history_df = df.sort_values(by=['location_name', 'date'])
+        logger.info("✅ History Data Loaded.")
 except Exception as e:
     logger.error(f"❌ Init Error: {e}")
 
-# --- API MỚI: TRẢ VỀ THÔNG SỐ MODEL ---
 @app.route('/model-info', methods=['GET'])
 def model_info():
-    # Kiểm tra model đã load chưa
-    if not specialist:
-        # Nếu chưa load file pkl, trả về lỗi 503 (Service Unavailable)
-        return jsonify({'error': 'Model not loaded correctly'}), 503
+    if not rf_gatekeeper or not lstm_specialist:
+        return jsonify({'error': 'Model not fully loaded'}), 503
 
-    try:
-        # Lấy Feature Importance từ Random Forest Regressor
-        importances = specialist.feature_importances_
-        # Map tên feature với điểm số
-        feat_imp = [{'name': f, 'score': float(i)} for f, i in zip(FEATURES, importances)]
-        # Sắp xếp giảm dần
-        feat_imp.sort(key=lambda x: x['score'], reverse=True)
+    # Lấy Feature Importance từ RF (LSTM không có feature importance trực tiếp)
+    importances = rf_gatekeeper.feature_importances_
+    feat_imp = [{'name': f, 'score': float(i)} for f, i in zip(FEATURES, importances)]
+    feat_imp.sort(key=lambda x: x['score'], reverse=True)
 
-        return jsonify({
-            'algorithm': 'Random Forest Hybrid (Classifier + Regressor)',
-            'metrics': {
-                'accuracy_gatekeeper': 88.5,
-                'r2_score_specialist': 0.74
-            },
-            'feature_importance': feat_imp
-        })
-    except Exception as e:
-        logger.error(f"Model Info Error: {e}")
-        return jsonify({'error': str(e)}), 500
+    return jsonify({
+        'algorithm': 'Hybrid Model: Random Forest (Classification) + LSTM (Regression)',
+        'metrics': {
+            'gatekeeper_accuracy': '~88% (RF)',
+            'specialist_r2': '~0.81 (LSTM)'
+        },
+        'feature_importance': feat_imp
+    })
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    if not gatekeeper or not specialist:
-        return jsonify({'message': 'Model Error', 'predicted_rainfall': -1.0}), 500
+    if not rf_gatekeeper or not lstm_specialist or not scaler:
+        return jsonify({'message': 'System initializing...', 'predicted_rainfall': -1.0}), 503
 
     try:
         data = request.get_json()
@@ -113,7 +123,7 @@ def predict():
         raw_loc_name = data.get('location_name', '').strip()
         csv_loc_name = LOCATION_MAPPING.get(raw_loc_name, raw_loc_name)
 
-        # 1. Feature Engineering
+        # 1. Feature Engineering (Tính toán đặc trưng vật lý)
         dew_point = calculate_dew_point(temp, hum)
         lst_minus_temp = lst - temp
         heat_index = temp * hum
@@ -121,7 +131,7 @@ def predict():
         day_sin = np.sin(2 * np.pi * now.timetuple().tm_yday / 365.0)
         day_cos = np.cos(2 * np.pi * now.timetuple().tm_yday / 365.0)
 
-        # 2. Get History
+        # 2. Lấy dữ liệu lịch sử (Lag Features)
         feats = {'temp_change': 0.0, 'hum_change': 0.0, 'rain_lag_1': 0.0, 'rain_mean_3d': 0.0}
         if history_df is not None:
             loc_data = history_df[history_df['location_name'] == csv_loc_name]
@@ -132,13 +142,17 @@ def predict():
                 feats['rain_lag_1'] = last_row['rainfall']
                 feats['rain_mean_3d'] = loc_data.tail(3)['rainfall'].mean()
 
-        # 3. KỸ THUẬT "STORM INJECTION"
-        if wind >= 10.0 and hum >= 95.0:
-            logger.info("🌪️ Phát hiện điều kiện Bão: Kích hoạt chế độ Storm Injection")
+        # 3. --- REALISM ALGORITHM: STORM INJECTION ---
+        # Logic này giúp mô hình "thông minh" hơn với các tình huống cực đoan
+        is_storm_condition = False
+        if wind >= 10.0 and hum >= 93.0:
+            logger.info("🌪️ Storm Injection Activated: Điều kiện bão/áp thấp nhiệt đới")
+            is_storm_condition = True
+            # Giả lập lịch sử mưa lớn để kích thích LSTM dự báo cao lên
             feats['rain_lag_1'] = max(feats['rain_lag_1'], 50.0)
             feats['rain_mean_3d'] = max(feats['rain_mean_3d'], 30.0)
 
-        # 4. DataFrame
+        # 4. Tạo DataFrame đầu vào
         input_row = pd.DataFrame({
             'lst': [lst], 'humidity': [hum], 'temperature': [temp], 'wind_speed': [wind],
             'lat': [lat], 'lon': [lon], 'day_sin': [day_sin], 'day_cos': [day_cos],
@@ -147,25 +161,56 @@ def predict():
             'rain_lag_1': [feats['rain_lag_1']], 'rain_mean_3d': [feats['rain_mean_3d']]
         })
 
-        # 5. Predict
-        is_raining_prob = gatekeeper.predict_proba(input_row)[0][1]
+        # Đảm bảo thứ tự cột đúng như lúc train
+        input_row = input_row[FEATURES]
+
+        # 5. PREDICT FLOW
+        # BƯỚC A: RF Gatekeeper (Có mưa hay không?)
+        # Lấy xác suất mưa (class 1)
+        rain_prob = rf_gatekeeper.predict_proba(input_row)[0][1]
+
         final_rain = 0.0
         msg = "Trời nắng"
 
-        if is_raining_prob < 0.4:
+        # Ngưỡng quyết định mưa: Nếu Storm Injection bật, giảm ngưỡng xuống 30% để bắt nhạy hơn
+        threshold = 0.3 if is_storm_condition else 0.45
+
+        if rain_prob < threshold:
             final_rain = 0.0
             msg = "Trời nắng / Không mưa"
         else:
-            pred_log = specialist.predict(input_row)[0]
-            final_rain = max(0.0, float(np.expm1(pred_log)))
-            if final_rain < 0.5: final_rain = 0.5
+            # BƯỚC B: LSTM Specialist (Mưa bao nhiêu?)
+            # b1. Chuẩn hóa dữ liệu (Scaling)
+            input_scaled = scaler.transform(input_row)
 
-            if final_rain > 50: msg = "Mưa rất to / Giông bão"
+            # b2. Reshape sang 3D [1, 1, n_features] cho LSTM
+            input_lstm = input_scaled.reshape((1, 1, len(FEATURES)))
+
+            # b3. Dự báo (Log space)
+            pred_log = lstm_specialist.predict(input_lstm, verbose=0)[0][0]
+
+            # b4. Chuyển ngược lại giá trị thực (Inverse Log)
+            final_rain = float(np.expm1(pred_log))
+
+            # b5. Logic hậu xử lý (Post-processing) cho "Hợp lý với đời thực"
+            if final_rain < 0: final_rain = 0.0
+
+            # Logic: Nếu độ ẩm thấp mà RF vẫn báo mưa (do sai số), ép mưa nhỏ lại
+            if hum < 70.0 and final_rain > 5.0:
+                final_rain = final_rain * 0.2 # Giảm mưa ảo
+
+            # Logic: Nếu Storm Injection bật, đảm bảo mưa không quá bé
+            if is_storm_condition and final_rain < 10.0:
+                final_rain = 10.0 + (wind * 0.5) # Ép lên mức mưa vừa
+
+            # Tạo thông báo
+            if final_rain > 100: msg = "Mưa đặc biệt lớn (Nguy hiểm)"
+            elif final_rain > 50: msg = "Mưa rất to / Giông bão"
             elif final_rain > 25: msg = "Mưa to"
             elif final_rain > 10: msg = "Mưa vừa"
-            else: msg = "Mưa nhỏ"
+            else: msg = "Mưa nhỏ / Mưa rào nhẹ"
 
-        logger.info(f"🎯 Kết quả: {final_rain:.2f}mm ({msg})")
+        logger.info(f"🎯 Kết quả: {final_rain:.2f}mm ({msg}) - Prob: {rain_prob:.2f}")
 
         return jsonify({
             'predicted_rainfall': round(final_rain, 2),

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>Đăng nhập hệ thống - RainAI</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body {
+        background: #f1f5f9;
+        display: flex; align-items: center; justify-content: center;
+        height: 100vh;
+    }
+    .login-card {
+        width: 400px; max-width: 90%;
+        background: white; padding: 2.5rem; border-radius: 16px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }
+    .login-logo { margin-bottom: 1.5rem; color: #0f172a; font-weight: 800; font-size: 1.5rem; }
+    .alert-error {
+        background: #fee2e2; color: #ef4444; padding: 0.75rem;
+        border-radius: 8px; font-size: 0.9rem; margin-bottom: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-card">
+  <div class="login-logo">RainAI System</div>
+
+  <div th:if="${param.error}" class="alert-error">
+    Sai tên đăng nhập hoặc mật khẩu!
+  </div>
+  <div th:if="${param.logout}" class="alert-error" style="background: #dcfce7; color: #166534;">
+    Đã đăng xuất thành công.
+  </div>
+
+  <form th:action="@{/admin/login}" method="post">
+    <div class="form-group" style="text-align: left;">
+      <label class="lbl">Tên đăng nhập</label>
+      <input type="text" name="username" class="inp" placeholder="admin / manager" required autofocus>
+    </div>
+
+    <div class="form-group" style="text-align: left;">
+      <label class="lbl">Mật khẩu</label>
+      <input type="password" name="password" class="inp" placeholder="******" required>
+    </div>
+
+    <button type="submit" class="btn-modern btn-primary" style="margin-top: 1rem;">
+      Đăng nhập quản trị
+    </button>
+  </form>
+
+  <div style="margin-top: 2rem; font-size: 0.85rem; color: #64748b;">
+    <a href="/" style="text-decoration: none; color: #64748b;">← Quay về trang chủ</a>
+  </div>
+</div>
+
+</body>
+</html>

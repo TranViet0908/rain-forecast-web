@@ -29,27 +29,30 @@ public class WeatherController {
     // ==========================================
 
     @GetMapping("/")
-    public String showDashboard(Model model) {
-        List<Location> locations = weatherService.getAllLocations();
-        model.addAttribute("locations", locations);
-        model.addAttribute("predictionRequest", new PredictionRequest());
+    public String showLandingPage(Model model) {
+        // 1. Lấy danh sách dự báo mới nhất cho các tỉnh
+        List<PredictionHistory> forecasts = weatherService.getLatestForecasts();
+        model.addAttribute("forecasts", forecasts);
+
+        // 2. Tính toán cập nhật mới nhất (để hiển thị thời gian update)
+        String lastUpdate = forecasts.isEmpty() ? "Chưa có dữ liệu" :
+                forecasts.get(0).getPredictionTimestamp().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy"));
+        model.addAttribute("lastUpdate", lastUpdate);
+
         return "index";
     }
 
-    @GetMapping("/history")
-    public String showHistory(@RequestParam(required = false) Long locationId, Model model) {
-        model.addAttribute("locations", weatherService.getAllLocations());
-        List<PredictionHistory> historyList;
+    @GetMapping("/prediction")
+    public String showPredictionPage(Model model) {
+        // Lấy danh sách tỉnh thành để đổ vào dropdown chọn khu vực
+        List<Location> locations = weatherService.getAllLocations();
+        model.addAttribute("locations", locations);
 
-        if (locationId != null) {
-            historyList = weatherService.getHistoryByLocation(locationId);
-            model.addAttribute("selectedLocationId", locationId);
-        } else {
-            historyList = weatherService.getAllHistories();
-        }
+        // Tạo object rỗng để hứng dữ liệu form
+        model.addAttribute("predictionRequest", new PredictionRequest());
 
-        model.addAttribute("histories", historyList);
-        return "history";
+        // Trả về file templates/prediction.html
+        return "prediction";
     }
 
     @GetMapping("/map")
@@ -96,6 +99,17 @@ public class WeatherController {
         } catch (Exception e) {
             log.error("Lỗi API Weather: ", e);
             return ResponseEntity.badRequest().body("Lỗi Server: " + e.getMessage());
+        }
+    }
+    @GetMapping("/api/forecast")
+    @ResponseBody
+    public ResponseEntity<List<PredictionResponse>> getFutureForecast(@RequestParam Long locationId) {
+        try {
+            List<PredictionResponse> forecast = weatherService.getMultiDayForecast(locationId);
+            return ResponseEntity.ok(forecast);
+        } catch (Exception e) {
+            log.error("Lỗi dự báo tương lai: ", e);
+            return ResponseEntity.badRequest().build();
         }
     }
 }
