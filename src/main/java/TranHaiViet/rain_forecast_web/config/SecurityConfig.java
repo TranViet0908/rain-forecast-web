@@ -38,7 +38,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         // Cho phép truy cập trang login mới
-                        .requestMatchers("/", "/map", "/methodology", "/safety", "/prediction", "/admin/login", "/error", "/css/**", "/js/**", "/images/**", "/api/**").permitAll()
+                        .requestMatchers("/", "/map", "/methodology", "/safety", "/prediction", "/forecast/**", "/admin/login", "/error", "/css/**", "/js/**", "/images/**", "/api/**").permitAll()
                         .requestMatchers("/admin/accounts/**", "/admin/settings/**").hasRole("ADMIN")
                         .requestMatchers("/admin/**").hasAnyRole("ADMIN", "MANAGER")
                         .anyRequest().authenticated()

@@ -318,73 +318,6 @@ select:focus {
     box-shadow: 0 15px 40px rgba(37, 99, 235, 0.4);
 }
 
-/* ========== WEATHER VISUALIZER ========== */
-.weather-window {
-    position: relative;
-    border-radius: var(--radius-xl);
-    overflow: hidden;
-    height: 100%;
-    min-height: 500px;
-    background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-    box-shadow: var(--shadow-2xl);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    border: 3px solid rgba(255, 255, 255, 0.1);
-}
-
-.weather-clear {
-    background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
-}
-
-.weather-rain-light {
-    background: linear-gradient(180deg, #64748b 0%, #475569 100%);
-}
-
-.weather-rain-heavy {
-    background: linear-gradient(180deg, #334155 0%, #1e293b 100%);
-}
-
-.weather-storm {
-    background: linear-gradient(180deg, #111827 0%, #000000 100%);
-}
-
-.weather-content {
-    position: relative;
-    z-index: 10;
-    text-align: center;
-    background: rgba(0, 0, 0, 0.25);
-    padding: 3rem 2rem;
-    border-radius: 24px;
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.big-temp {
-    font-size: 5.5rem;
-    font-weight: 800;
-    line-height: 1;
-    margin: 0.75rem 0;
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-}
-
-.weather-status {
-    font-size: 1.5rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-.weather-sub {
-    font-size: 1rem;
-    opacity: 0.9;
-    margin-top: 0.75rem;
-}
-
 /* ========== TABLES ========== */
 .table-responsive {
     overflow-x: auto;
@@ -918,3 +851,204 @@ select:focus {
         filter: brightness(0.6) contrast(1.1);
         transition: background-image 0.5s ease-in-out; /* Hiệu ứng chuyển ảnh mượt */
     }
+    /* =========================================
+       FIX FOOTER LAYOUT (CHIA 4 CỘT)
+       ========================================= */
+    .footer-content {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr) !important; /* Bắt buộc chia 4 cột */
+        gap: 2rem;
+        margin-bottom: 3rem;
+    }
+
+    /* Tablet: 2 cột */
+    @media (max-width: 1024px) {
+        .footer-content {
+            grid-template-columns: repeat(2, 1fr) !important;
+        }
+    }
+
+    /* Mobile: 1 cột */
+    @media (max-width: 640px) {
+        .footer-content {
+            grid-template-columns: 1fr !important;
+        }
+        .main-footer {
+            padding: 3rem 1.5rem;
+        }
+    }
+
+    /* Khung chính */
+    .weather-window {
+        position: relative;
+        border-radius: 24px;
+        overflow: hidden;
+
+        /* [SỬA LẠI CHIỀU CAO TẠI ĐÂY] */
+        height: 100%;          /* Ăn theo chiều cao của cột cha */
+        min-height: 400px;     /* Chiều cao tối thiểu thấp hơn (trước là 500px) */
+        max-height: 600px;     /* Giới hạn chiều cao để không bị dài quá */
+
+        background-color: #0f172a;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        border: 1px solid rgba(255,255,255,0.1);
+
+        /* Căn giữa nội dung */
+        display: flex;
+        flex-direction: column;
+        justify-content: center; /* Căn giữa theo chiều dọc */
+    }
+
+    /* LỚP 1: ẢNH NỀN THÀNH PHỐ (Thay đổi theo trạng thái) */
+    .scene-bg {
+        position: absolute;
+        inset: 0;
+        /* Ảnh thành phố góc rộng (Cityscape) */
+        background-image: url('https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?q=80&w=1000&auto=format&fit=crop');
+        background-size: cover;
+        background-position: center;
+        transition: filter 1.5s ease, transform 10s ease; /* Chuyển cảnh mượt */
+        z-index: 0;
+        transform: scale(1.1); /* Zoom nhẹ để animation pan */
+    }
+
+    /* LỚP 2: MÂY TRÔI (Giả lập bằng Gradient cho nhẹ) */
+    .cloud-layer {
+        position: absolute;
+        inset: 0;
+        background: url('https://raw.githubusercontent.com/basmilius/weather-icons/master/design/fill/final/mist.svg'); /* Hoặc ảnh mây PNG */
+        background-size: cover;
+        opacity: 0; /* Mặc định ẩn */
+        z-index: 1;
+        animation: moveClouds 60s linear infinite;
+    }
+
+    /* LỚP 3: HẠT MƯA (JS sẽ tạo div vào đây) */
+    .rain-container {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        pointer-events: none;
+    }
+
+    /* Hạt mưa đơn lẻ */
+    .rain-drop {
+        position: absolute;
+        width: 2px;
+        height: 15px;
+        background: rgba(255, 255, 255, 0.6);
+        top: -20px;
+        animation: rainFall linear infinite;
+    }
+
+    /* LỚP 4: HIỆU ỨNG KÍNH & SẤM CHỚP */
+    .scene-overlay {
+        position: absolute;
+        inset: 0;
+        z-index: 3;
+        /* Hiệu ứng kính phản chiếu nhẹ */
+        background: linear-gradient(125deg, rgba(255,255,255,0.1) 0%, transparent 40%, transparent 60%, rgba(255,255,255,0.05) 100%);
+        box-shadow: inset 0 0 60px rgba(0,0,0,0.5); /* Viền tối tạo chiều sâu */
+        pointer-events: none;
+    }
+
+    /* LỚP 5: NỘI DUNG CHỮ (Nổi lên trên cùng) */
+    .weather-content {
+        position: relative;
+        z-index: 10;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        color: white;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.8); /* Bóng chữ đậm để đọc được trên ảnh */
+    }
+
+    /* --- CÁC TRẠNG THÁI THỜI TIẾT (STATES) --- */
+
+    /* 1. CHỜ (IDLE) - Đêm thành phố */
+    .weather-window.state-idle .scene-bg {
+        filter: brightness(0.6) hue-rotate(200deg) contrast(1.1); /* Xanh tím công nghệ */
+    }
+
+    /* 2. TẠNH RÁO (SAFE) - Sáng trong lành */
+    .weather-window.state-safe .scene-bg {
+        filter: brightness(1.1) saturate(1.2) contrast(1.05); /* Sáng, rực rỡ */
+    }
+    .weather-window.state-safe .cloud-layer {
+        opacity: 0.3; /* Mây mỏng */
+    }
+
+    /* 3. MƯA (RAIN) - Xám xịt */
+    .weather-window.state-rain .scene-bg {
+        filter: brightness(0.7) grayscale(0.6) blur(1px); /* Tối, mất màu, hơi mờ */
+    }
+
+    /* 4. BÃO (STORM) - Tối sầm, đáng sợ */
+    .weather-window.state-storm .scene-bg {
+        filter: brightness(0.4) grayscale(0.8) contrast(1.3) sepia(0.2); /* Rất tối, ám màu */
+        animation: shake 0.5s ease-in-out infinite; /* Rung lắc nhẹ nếu muốn */
+    }
+    /* Hiệu ứng chớp (Flash) cho bão */
+    .weather-window.state-storm .scene-overlay {
+        animation: flash 4s infinite random; /* Chớp tắt ngẫu nhiên */
+    }
+
+    /* --- KEYFRAMES --- */
+    @keyframes rainFall {
+        0% { transform: translateY(0); opacity: 1; }
+        100% { transform: translateY(600px); opacity: 0; }
+    }
+
+    @keyframes moveClouds {
+        0% { background-position: 0 0; }
+        100% { background-position: 1000px 0; }
+    }
+
+    @keyframes flash {
+        0%, 95% { background-color: transparent; }
+        96% { background-color: rgba(255, 255, 255, 0.8); } /* Chớp sáng */
+        97% { background-color: transparent; }
+        98% { background-color: rgba(255, 255, 255, 0.4); } /* Chớp dư chấn */
+        100% { background-color: transparent; }
+    }
+
+/* 1. Thiết lập cứng cho các hàng trong bảng Popup */
+.swal2-popup .fancy-table tr,
+.swal2-popup .forecast-row {
+    transform: none !important;          /* Cấm dịch chuyển vị trí */
+    transition: background-color 0.15s ease !important; /* Chỉ cho phép đổi màu nền */
+    box-shadow: none !important;         /* Tắt bóng đổ mặc định */
+    border: none !important;             /* Tắt viền gây lệch kích thước */
+    margin: 0 !important;
+    position: static !important;
+}
+
+/* 2. Cố định các ô dữ liệu (TD) */
+.swal2-popup .forecast-row td {
+    border-bottom: 1px solid #f1f5f9 !important; /* Chỉ giữ gạch ngang mờ */
+    border-left: none !important;        /* Xóa sạch viền trái */
+    border-right: none !important;       /* Xóa sạch viền phải */
+    vertical-align: middle !important;
+    position: relative !important;       /* Để xử lý z-index nếu cần */
+}
+
+/* 3. HIỆU ỨNG HOVER "BÓNG MA" (KHÔNG CHIẾM DIỆN TÍCH) */
+.swal2-popup .forecast-row:hover {
+    background-color: #f8fafc !important; /* Đổi màu nền nhẹ */
+
+    /* KỸ THUẬT QUAN TRỌNG NHẤT: */
+    /* Vẽ một cái bóng màu xanh đè vào bên trong (inset) 4px */
+    /* Bóng đổ không làm thay đổi kích thước ô -> KHÔNG NHÚC NHÍCH */
+    box-shadow: inset 4px 0 0 0 #2563eb !important;
+
+    z-index: auto !important;
+}
+
+/* 4. Xóa border của ô đầu tiên để tránh xung đột với bóng đổ */
+.swal2-popup .forecast-row:hover td:first-child {
+    border: none !important;
+    border-bottom: 1px solid #f1f5f9 !important; /* Giữ lại gạch chân */
+}

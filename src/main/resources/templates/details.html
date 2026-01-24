@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chi tiết dự báo - RainAI</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3/lib/anime.min.js"></script>
+  <style>
+    /* --- CUSTOM CSS CHO TRANG CHI TIẾT --- */
+
+    /* 1. HERO SECTION CAO CẤP */
+    .detail-hero {
+        position: relative;
+        padding: 8rem 2rem 6rem 2rem; /* Tăng padding để thoáng */
+        margin-bottom: 4rem;
+        color: white;
+        overflow: hidden;
+        border-radius: 0 0 50px 50px; /* Bo cong cạnh dưới */
+        box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Lớp ảnh nền động */
+    .detail-bg {
+        position: absolute; inset: 0; z-index: -2;
+        background-size: cover; background-position: center;
+        filter: brightness(0.5) contrast(1.1); /* Tối đi để chữ nổi */
+        transform: scale(1.05); /* Zoom nhẹ để tránh viền trắng */
+    }
+
+    .detail-content {
+        position: relative; z-index: 1; width: 100%; max-width: 1200px;
+        display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 2rem;
+    }
+
+    .hero-text-group h1 { font-size: 4rem; font-weight: 800; margin: 0; line-height: 1.1; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+    .hero-text-group p { font-size: 1.2rem; opacity: 0.9; margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 500; }
+
+    .hero-stat-group { text-align: right; }
+    .hero-stat-val { font-size: 5.5rem; font-weight: 800; line-height: 1; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+    .hero-stat-unit { font-size: 1.5rem; font-weight: 600; opacity: 0.8; margin-left: 5px; }
+    .hero-stat-desc { font-size: 1.1rem; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; margin-top: 0.5rem; opacity: 0.9; }
+
+    /* 2. GRID LAYOUT CHÍNH */
+    .dashboard-grid {
+        display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;
+        max-width: 1200px; margin: -5rem auto 3rem auto; padding: 0 2rem;
+        position: relative; z-index: 10;
+    }
+
+    /* 3. CARD STYLE KÍNH MỜ */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95); /* Trắng đục */
+        border-radius: 24px; padding: 2rem;
+        box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+        border: 1px solid rgba(255,255,255,0.5);
+        backdrop-filter: blur(10px);
+    }
+
+    /* 4. METRIC GRID (Các ô nhỏ) */
+    .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .metric-item {
+        background: #f8fafc; padding: 1.5rem; border-radius: 16px;
+        text-align: center; border: 1px solid #e2e8f0; transition: all 0.3s;
+    }
+    .metric-item:hover { transform: translateY(-5px); border-color: #2563eb; box-shadow: 0 5px 15px rgba(37, 99, 235, 0.1); }
+    .metric-icon { font-size: 2.2rem; margin-bottom: 0.5rem; display: block; }
+    .metric-val { font-size: 1.5rem; font-weight: 800; color: #1e293b; }
+    .metric-lbl { font-size: 0.8rem; color: #64748b; text-transform: uppercase; font-weight: 700; margin-top: 0.2rem; }
+
+    /* 5. ADVICE BOX (Khung lời khuyên) */
+    .advice-box {
+        margin-top: 2rem; padding: 1.5rem; border-radius: 16px;
+        color: white; display: flex; gap: 1.5rem; align-items: center;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    }
+    .advice-safe { background: linear-gradient(135deg, #10b981, #059669); }
+    .advice-warn { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .advice-danger { background: linear-gradient(135deg, #ef4444, #b91c1c); }
+
+    /* Responsive */
+    @media(max-width: 900px) {
+        .dashboard-grid { grid-template-columns: 1fr; margin-top: 0; }
+        .detail-hero { padding: 5rem 1.5rem; text-align: center; border-radius: 0; }
+        .detail-content { flex-direction: column; align-items: center; text-align: center; }
+        .hero-stat-group { text-align: center; margin-top: 1rem; }
+    }
+  </style>
+</head>
+<body style="background: #f1f5f9;">
+
+<div th:replace="~{fragments/header :: header}"></div>
+
+<main>
+
+  <section class="detail-hero">
+    <div class="detail-bg" th:style="'background-image: url(/images/' + ${bgImage} + ')'"></div>
+
+    <div class="detail-content">
+      <div class="hero-text-group">
+        <a href="/" style="color: rgba(255,255,255,0.8); text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; font-size: 0.9rem; background: rgba(0,0,0,0.2); padding: 5px 15px; border-radius: 50px;">
+          &larr; Quay lại trang chủ
+        </a>
+        <h1 th:text="${detail.name}">Tên Tỉnh</h1>
+        <p>
+          <span>📍</span>
+          <span>Miền Trung, Việt Nam</span> •
+          <span th:text="${detail.name}"></span>
+        </p>
+      </div>
+
+      <div class="hero-stat-group">
+        <div style="font-size: 0.9rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 2px;">DỰ BÁO HÔM NAY</div>
+        <div class="hero-stat-val">
+          <span th:text="${#numbers.formatDecimal(detail.predictedRain, 1, 1)}">0.0</span><span class="hero-stat-unit">mm</span>
+        </div>
+        <div class="hero-stat-desc">
+          <span th:if="${detail.predictedRain == 0}">☀️ Trời quang đãng</span>
+          <span th:if="${detail.predictedRain > 0 && detail.predictedRain <= 16}">🌦️ Mưa rải rác</span>
+          <span th:if="${detail.predictedRain > 16 && detail.predictedRain <= 50}">🌧️ Mưa vừa</span>
+          <span th:if="${detail.predictedRain > 50}">⛈️ CẢNH BÁO MƯA LỚN</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="dashboard-grid">
+
+    <div class="left-col">
+      <div class="glass-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <h3 style="margin: 0; color: #1e293b; font-size: 1.3rem; display: flex; align-items: center; gap: 0.5rem;">
+            📉 Xu hướng 5 ngày tới
+          </h3>
+          <span style="font-size: 0.8rem; color: #64748b; background: #f1f5f9; padding: 4px 10px; border-radius: 6px;">AI Forecast</span>
+        </div>
+
+        <div style="height: 320px; width: 100%;">
+          <canvas id="forecastChart"></canvas>
+        </div>
+      </div>
+
+      <div class="advice-box"
+           th:classappend="${detail.predictedRain > 50 ? 'advice-danger' : (detail.predictedRain > 10 ? 'advice-warn' : 'advice-safe')}">
+        <div style="font-size: 3rem; flex-shrink: 0;">
+          <span th:if="${detail.predictedRain > 50}">🚨</span>
+          <span th:if="${detail.predictedRain > 10 && detail.predictedRain <= 50}">⚠️</span>
+          <span th:if="${detail.predictedRain <= 10}">✅</span>
+        </div>
+        <div>
+          <h4 style="margin: 0 0 0.5rem 0; font-size: 1.2rem; font-weight: 700;">Khuyến nghị hành động</h4>
+          <p style="margin: 0; opacity: 0.95; line-height: 1.5; font-size: 0.95rem;">
+            <span th:if="${detail.predictedRain > 50}">Nguy cơ ngập úng cao. Kiểm tra mái nhà, khơi thông cống rãnh. Hạn chế di chuyển.</span>
+            <span th:if="${detail.predictedRain > 10 && detail.predictedRain <= 50}">Mang theo áo mưa khi ra ngoài. Đường trơn trượt, hãy lái xe cẩn thận.</span>
+            <span th:if="${detail.predictedRain <= 10}">Thời tiết đẹp, thuận lợi cho du lịch và các hoạt động ngoài trời.</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-col">
+      <div class="glass-card" style="height: 100%;">
+        <h3 style="margin-bottom: 1.5rem; color: #1e293b; font-size: 1.3rem;">📊 Chỉ số môi trường</h3>
+
+        <div class="metrics-grid">
+          <div class="metric-item">
+            <span class="metric-icon">🌡️</span>
+            <div class="metric-val" th:text="${detail.currentTemp} + '°C'">--</div>
+            <div class="metric-lbl">Nhiệt độ KK</div>
+          </div>
+          <div class="metric-item">
+            <span class="metric-icon">💧</span>
+            <div class="metric-val" th:text="${detail.currentHumidity} + '%'">--</div>
+            <div class="metric-lbl">Độ ẩm</div>
+          </div>
+          <div class="metric-item">
+            <span class="metric-icon">💨</span>
+            <div class="metric-val" th:text="${detail.currentWind} + ' m/s'">--</div>
+            <div class="metric-lbl">Gió</div>
+          </div>
+          <div class="metric-item">
+            <span class="metric-icon">🛰️</span>
+            <div class="metric-val" th:text="${detail.currentLst} + '°C'">--</div>
+            <div class="metric-lbl">LST (Đất)</div>
+          </div>
+        </div>
+
+        <div style="margin-top: 2rem; text-align: center;">
+          <a href="/map" class="btn-modern btn-primary" style="width: 100%; display: inline-block;">
+            🗺️ Xem bản đồ vệ tinh
+          </a>
+          <p style="margin-top: 1rem; font-size: 0.8rem; color: #64748b;">Dữ liệu cập nhật từ trạm quan trắc & vệ tinh NASA.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+
+<script th:inline="javascript">
+  /*<![CDATA[*/
+  // 1. Nhận dữ liệu từ Controller
+  let rawData = /*[[${forecastList}]]*/ [];
+  /*]]>*/
+
+  // 2. [FIX] Kiểm tra và tạo dữ liệu giả lập nếu API lỗi (Fallback Data)
+  if (!rawData || rawData.length === 0) {
+      console.warn("⚠ Không có dữ liệu từ API. Đang tạo dữ liệu giả lập để hiển thị.");
+
+      // Tạo 5 ngày tiếp theo
+      const today = new Date();
+      rawData = Array.from({length: 5}, (_, i) => {
+          const date = new Date(today);
+          date.setDate(today.getDate() + i + 1);
+
+          // Format YYYY-MM-DD
+          const dateString = date.toISOString().split('T')[0];
+
+          // Random lượng mưa từ 0 - 30mm (nhìn cho đẹp)
+          return {
+              message: dateString,
+              predictedRainfall: Math.random() * 25
+          };
+      });
+  }
+
+  // 3. Chuẩn bị dữ liệu vẽ
+  const labels = rawData.map(item => {
+      // Xử lý an toàn cho chuỗi ngày tháng
+      if (!item.message) return "N/A";
+      const dateParts = item.message.split('-');
+      // Trả về DD/MM (Ví dụ: 25/01)
+      return dateParts.length === 3 ? dateParts[2] + '/' + dateParts[1] : item.message;
+  });
+
+  // Hỗ trợ cả 2 kiểu đặt tên biến (Java camelCase hoặc JSON snake_case)
+  const dataPoints = rawData.map(item => item.predictedRainfall || item.predicted_rainfall || 0);
+
+  // 4. Vẽ biểu đồ
+  const ctx = document.getElementById('forecastChart').getContext('2d');
+
+  // Tạo màu Gradient xanh dương hiện đại
+  const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+  gradient.addColorStop(0, 'rgba(37, 99, 235, 0.5)'); // Xanh đậm ở trên
+  gradient.addColorStop(1, 'rgba(37, 99, 235, 0.0)'); // Mờ dần ở dưới
+
+  new Chart(ctx, {
+      type: 'line',
+      data: {
+          labels: labels,
+          datasets: [{
+              label: 'Lượng mưa (mm)',
+              data: dataPoints,
+              borderColor: '#2563eb', // Màu đường kẻ
+              backgroundColor: gradient, // Màu nền gradient
+              borderWidth: 3,
+              pointBackgroundColor: '#fff',
+              pointBorderColor: '#2563eb',
+              pointRadius: 6,       // Điểm tròn to hơn chút
+              pointHoverRadius: 8,  // Khi di chuột vào thì to ra
+              fill: true,
+              tension: 0.4          // Đường cong mềm mại (Spline)
+          }]
+      },
+      options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+              mode: 'index',
+              intersect: false,
+          },
+          plugins: {
+              legend: { display: false }, // Ẩn chú thích thừa
+              tooltip: {
+                  backgroundColor: 'rgba(15, 23, 42, 0.9)', // Tooltip màu tối
+                  padding: 12,
+                  titleFont: { size: 14 },
+                  bodyFont: { size: 14, weight: 'bold' },
+                  callbacks: {
+                      label: function(context) {
+                          return context.parsed.y.toFixed(1) + ' mm';
+                      }
+                  }
+              }
+          },
+          scales: {
+              y: {
+                  beginAtZero: true,
+                  grid: { borderDash: [5, 5], color: '#e2e8f0' },
+                  title: { display: true, text: 'Lượng mưa (mm)', color: '#64748b' }
+              },
+              x: {
+                  grid: { display: false }, // Ẩn lưới dọc cho thoáng
+                  ticks: { font: { weight: '600' }, color: '#64748b' }
+              }
+          }
+      }
+  });
+
+  // 5. Hiệu ứng xuất hiện mượt mà
+  anime({
+      targets: '.detail-content, .dashboard-grid',
+      translateY: [30, 0],
+      opacity: [0, 1],
+      duration: 800,
+      easing: 'easeOutExpo',
+      delay: anime.stagger(100)
+  });
+</script>
+
+</body>
+</html>

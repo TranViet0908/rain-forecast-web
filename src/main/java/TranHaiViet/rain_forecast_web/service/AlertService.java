@@ -32,19 +32,22 @@ public class AlertService {
     private String fromEmail;
 
     // Chạy mỗi 1 giờ (0 phút, mỗi giờ)
-    @Scheduled(cron = "0 0 * * * ?")
+    @Scheduled(cron = "0 0 * * * ?") // Chạy mỗi giờ
     public void runAutoAlertSystem() {
         log.info("⏰ BẮT ĐẦU QUÉT HỆ THỐNG CẢNH BÁO TỰ ĐỘNG...");
         List<Location> locations = locationRepository.findAll();
 
         for (Location loc : locations) {
             try {
-                // Lấy thời tiết hiện tại
+                // Lấy thời tiết hiện tại từ API OpenWeatherMap
                 PredictionRequest weatherNow = weatherService.getCurrentWeatherFromApi(loc.getId());
 
                 if (weatherNow != null) {
-                    // Dự báo
-                    PredictionResponse forecast = weatherService.predictAndSave(loc.getId(), weatherNow);
+                    // [FIX TẠI ĐÂY]
+                    // Gọi hàm mới predictRainfall với tham số saveToDb = true
+                    // Vì đây là dữ liệu thật tự động quét, cần lưu để hiển thị lên Map/Home
+                    PredictionResponse forecast = weatherService.predictRainfall(loc.getId(), weatherNow, true);
+
                     Double rain = forecast.getPredictedRainfall();
 
                     // Nếu mưa > 50mm -> Gửi cảnh báo

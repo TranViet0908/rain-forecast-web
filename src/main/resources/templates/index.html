@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Trang chủ - RainAI System</title>
   <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
 
   <style>
@@ -111,6 +113,31 @@
         .guide-grid { grid-template-columns: 1fr; }
         .cinematic-hero { padding: 4rem 1.5rem; min-height: 400px; }
     }
+      /* CSS CHO SWIPER COVERFLOW */
+    .swiper {
+        width: 100%;
+        padding-top: 50px;
+        padding-bottom: 50px;
+    }
+
+    .swiper-slide {
+        background-position: center;
+        background-size: cover;
+        width: 320px; /* Kích thước cố định để hiệu ứng 3D đẹp nhất */
+        height: 420px;
+        /* Các thuộc tính cũ của province-card giữ nguyên nhưng bỏ margin/hover cũ */
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+        /* Quan trọng: Slide không active sẽ bị tối đi */
+        transition: all 0.3s;
+    }
+
+    /* Hiệu ứng phản chiếu (Optional - nhìn rất ảo) */
+    .swiper-slide-shadow-left,
+    .swiper-slide-shadow-right {
+        border-radius: 20px;
+    }
   </style>
 </head>
 
@@ -141,83 +168,68 @@
     </div>
   </section>
 
-  <section id="forecast">
-    <div style="display: flex; justify-content: space-between; align-items: end; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
-      <div>
-        <h2 style="font-size: 2rem; color: #0f172a; margin-bottom: 0.5rem; font-weight: 800;">Thời tiết 11 Tỉnh Thành</h2>
-        <p style="color: #64748b;">Cập nhật realtime. Ảnh nền là địa danh đặc trưng của từng tỉnh.</p>
-      </div>
-      <div class="filter-section" style="margin: 0;">
-        <button class="filter-btn active" onclick="filterForecast('all', this)">Tất cả</button>
-        <button class="filter-btn" onclick="filterForecast('high', this)">⚠️ Mưa to</button>
-        <button class="filter-btn" onclick="filterForecast('safe', this)">☀️ Tạnh ráo</button>
-      </div>
+    <section id="forecast" style="overflow: hidden;"> <div style="display: flex; justify-content: space-between; align-items: end; margin-bottom: 1rem; padding: 0 2rem;">
+        <div>
+            <h2 style="font-size: 2rem; color: #0f172a; margin-bottom: 0.5rem; font-weight: 800;">Thời tiết 11 Tỉnh Thành</h2>
+            <p style="color: #64748b;">Vuốt để xem chi tiết từng khu vực.</p>
+        </div>
     </div>
 
-    <div class="forecast-grid">
-      <div class="province-card js-card"
-           th:each="item : ${forecasts}"
-           th:data-rain="${item.predictedRainfall}"
-           th:onclick="'window.location.href=\'/api/forecast?locationId=' + ${item.location.id} + '\''">
+        <div class="swiper mySwiper">
+            <div class="swiper-wrapper">
 
-        <div class="temp-badge" th:if="${item.predictionFeature != null}">
-          <span th:text="${item.predictionFeature.inputTemp}">--</span>°C
-        </div>
+                <div class="swiper-slide province-card"
+                     th:each="item : ${forecasts}"
+                     th:onclick="'window.location.href=\'/forecast/details?locationId=' + ${item.location.id} + '\''">
 
-        <div class="province-bg"
-             th:style="'background-image: url(' + ${
-                        item.location.name.contains('Thanh Hóa') ? '/images/samson.jpg' :
-                        item.location.name.contains('Nghệ An') ? '/images/quebac.jpg' :
-                        item.location.name.contains('Hà Tĩnh') ? '/images/hatinh.jpg' :
-                        item.location.name.contains('Quảng Trị') ? '/images/thanhco.jpg' :
-                        item.location.name.contains('Huế') ? '/images/hue.jpg' :
-                        item.location.name.contains('Đà Nẵng') ? '/images/cauvang.jpg' :
-                        item.location.name.contains('Quảng Ngãi') ? '/images/lyson.jpg' :
-                        item.location.name.contains('Gia Lai') ? '/images/bienho.jpg' :
-                        item.location.name.contains('Đắk Lắk') ? '/images/buondon.jpg' :
-                        item.location.name.contains('Khánh Hòa') ? '/images/nhatrang.jpg' :
-                        item.location.name.contains('Lâm Đồng') ? '/images/dalat.jpg' :
-                        '/images/default_rain.jpg'
-                     } + ');'">
-        </div>
+                    <div class="temp-badge" th:if="${item.predictionFeature != null}">
+                        <span th:text="${item.predictionFeature.inputTemp}">--</span>°C
+                    </div>
 
-        <div class="province-overlay"></div>
+                    <div class="province-bg"
+                         th:style="'background-image: url(' + ${
+                    item.location.name.contains('Thanh Hóa') ? '/images/samson.jpg' :
+                    item.location.name.contains('Nghệ An') ? '/images/quebac.jpg' :
+                    item.location.name.contains('Hà Tĩnh') ? '/images/hatinh.jpg' :
+                    item.location.name.contains('Quảng Trị') ? '/images/thanhco.jpg' :
+                    item.location.name.contains('Huế') ? '/images/hue.jpg' :
+                    item.location.name.contains('Đà Nẵng') ? '/images/cauvang.jpg' :
+                    item.location.name.contains('Quảng Ngãi') ? '/images/lyson.jpg' :
+                    item.location.name.contains('Gia Lai') ? '/images/bienho.jpg' :
+                    item.location.name.contains('Đắk Lắk') ? '/images/buondon.jpg' :
+                    item.location.name.contains('Khánh Hòa') ? '/images/nhatrang.jpg' :
+                    item.location.name.contains('Lâm Đồng') ? '/images/dalat.jpg' :
+                    '/images/default_rain.jpg'
+                 } + ');'">
+                    </div>
 
-        <div class="province-info">
-          <h3 th:text="${item.location.name}" style="font-size: 1.6rem; margin-bottom: 0.2rem; font-weight: 800; text-shadow: 0 2px 10px rgba(0,0,0,0.8);">Tên Tỉnh</h3>
-          <p style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 1rem;">Miền Trung</p>
+                    <div class="province-overlay"></div>
 
-          <div style="display: flex; align-items: center; gap: 1rem;">
-            <span style="font-size: 2.5rem; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));">
-                <span th:if="${item.predictedRainfall == 0}">🌤️</span>
-                <span th:if="${item.predictedRainfall > 0 and item.predictedRainfall <= 16}">🌦️</span>
-                <span th:if="${item.predictedRainfall > 16 and item.predictedRainfall <= 50}">🌧️</span>
-                <span th:if="${item.predictedRainfall > 50}">⛈️</span>
-            </span>
+                    <div class="province-info" style="padding: 1.5rem; position: absolute; bottom: 0; width: 100%;">
+                        <h3 th:text="${item.location.name}" style="font-size: 1.8rem; font-weight: 800; text-shadow: 0 2px 10px rgba(0,0,0,0.8); margin-bottom: 0.5rem;">Tên Tỉnh</h3>
 
-            <div>
-              <div style="font-size: 0.75rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">Dự báo 24h</div>
-              <div style="font-size: 1.6rem; font-weight: 800; color: #60a5fa; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">
-                <span th:text="${#numbers.formatDecimal(item.predictedRainfall, 1, 1)}">0.0</span> mm
-              </div>
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                    <span style="font-size: 2.5rem; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));">
+                        <span th:if="${item.predictedRainfall == 0}">🌤️</span>
+                        <span th:if="${item.predictedRainfall > 0 and item.predictedRainfall <= 16}">🌦️</span>
+                        <span th:if="${item.predictedRainfall > 16 and item.predictedRainfall <= 50}">🌧️</span>
+                        <span th:if="${item.predictedRainfall > 50}">⛈️</span>
+                    </span>
+                            <div>
+                                <div style="font-size: 0.75rem; opacity: 0.9;">DỰ BÁO 24H</div>
+                                <div style="font-size: 1.6rem; font-weight: 800; color: #60a5fa;">
+                                    <span th:text="${#numbers.formatDecimal(item.predictedRainfall, 1, 1)}">0.0</span> mm
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
-          </div>
 
-          <div th:if="${item.predictedRainfall > 50}" style="margin-top: 1rem;">
-            <span style="background: #ef4444; color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.5); display: inline-block;">
-                ⚠️ CẢNH BÁO MƯA LỚN
-            </span>
-          </div>
+            <div class="swiper-pagination"></div>
         </div>
-      </div>
-
-      <div th:if="${#lists.isEmpty(forecasts)}" style="grid-column: 1/-1; text-align: center; padding: 4rem; background: #f8fafc; border-radius: 16px;">
-        <div style="font-size: 3rem; margin-bottom: 1rem;">📭</div>
-        <p style="color: #64748b; font-size: 1.1rem;">Chưa có dữ liệu dự báo. Vui lòng chạy mô hình dự báo.</p>
-        <a href="/prediction" class="btn-modern btn-primary" style="margin-top: 1rem; display: inline-block;">Đến trang dự báo</a>
-      </div>
-    </div>
-  </section>
+    </section>
 
   <section id="safety-guide" style="margin-top: 6rem;">
     <div style="text-align: center; max-width: 700px; margin: 0 auto 3rem auto;">
@@ -289,6 +301,30 @@
           }
       });
   }
+    // KHỞI TẠO SWIPER 3D COVERFLOW
+  var swiper = new Swiper(".mySwiper", {
+    effect: "coverflow",
+    grabCursor: true,       // Con trỏ hình bàn tay khi kéo
+    centeredSlides: true,   // Slide chính nằm giữa
+    slidesPerView: "auto",  // Tự động tính số lượng slide hiển thị
+    initialSlide: 5,        // Bắt đầu từ slide giữa (Đà Nẵng chẳng hạn)
+    coverflowEffect: {
+      rotate: 30,           // Góc xoay 3D (Độ nghiêng)
+      stretch: 0,           // Khoảng cách kéo giãn
+      depth: 200,           // Độ sâu 3D (Càng lớn càng sâu)
+      modifier: 1,
+      slideShadows: true,   // Bóng đổ 3D (Rất quan trọng để nhìn thực)
+    },
+    pagination: {
+      el: ".swiper-pagination",
+      clickable: true,
+    },
+    autoplay: {
+      delay: 2500,
+      disableOnInteraction: false,
+    },
+    loop: true, // Lặp lại vô tận
+  });
 </script>
 
 </body>

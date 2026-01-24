@@ -185,15 +185,29 @@
       </div>
 
       <div id="resultContainer" style="height: 100%; display: none;">
-        <div id="weatherWindow" class="weather-window">
-          <div style="position: relative; z-index: 10; text-align: center; background: rgba(0,0,0,0.3); padding: 3rem; border-radius: 24px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);">
-            <div style="font-size: 0.9rem; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.8); margin-bottom: 1rem;">Kết quả phân tích AI</div>
-            <div class="big-temp">
-              <span id="rainfallValue">0</span><span style="font-size: 2.5rem; vertical-align: top; margin-left: 0.5rem;">mm</span>
+        <div id="weatherWindow" class="weather-window state-idle">
+
+          <div class="scene-bg"></div>
+
+          <div class="cloud-layer"></div>
+
+          <div id="rainContainer" class="rain-container"></div>
+
+          <div class="scene-overlay"></div>
+
+          <div class="weather-content">
+            <div style="background: rgba(0,0,0,0.4); padding: 2rem; border-radius: 20px; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.15);">
+              <div style="font-size: 0.9rem; letter-spacing: 2px; text-transform: uppercase; opacity: 0.8; margin-bottom: 0.5rem;">Kết quả phân tích AI</div>
+
+              <div class="big-temp">
+                <span id="rainfallValue">0</span><span style="font-size: 2.5rem; vertical-align: top; margin-left: 0.5rem;">mm</span>
+              </div>
+
+              <div id="weatherStatus" class="weather-status">Đang xử lý...</div>
+              <div id="weatherSub" style="margin-top: 0.5rem; opacity: 0.9; font-size: 1rem;">...</div>
             </div>
-            <div id="weatherStatus" class="weather-status">Đang xử lý...</div>
-            <div id="weatherSub" style="margin-top: 1rem; opacity: 0.9;">...</div>
           </div>
+
         </div>
       </div>
     </div>

@@ -29,16 +29,14 @@ public class WeatherController {
     // ==========================================
 
     @GetMapping("/")
-    public String showLandingPage(Model model) {
-        // 1. Lấy danh sách dự báo mới nhất cho các tỉnh
-        List<PredictionHistory> forecasts = weatherService.getLatestForecasts();
+    public String index(Model model) {
+        // [CŨ] Lấy từ Database (Dữ liệu có thể bị cũ/sai)
+        // List<PredictionHistory> forecasts = weatherService.getLatestForecasts();
+
+        // [MỚI] Gọi API Realtime + AI ngay lập tức
+        List<PredictionHistory> forecasts = weatherService.getRealtimeForecastForAll();
+
         model.addAttribute("forecasts", forecasts);
-
-        // 2. Tính toán cập nhật mới nhất (để hiển thị thời gian update)
-        String lastUpdate = forecasts.isEmpty() ? "Chưa có dữ liệu" :
-                forecasts.get(0).getPredictionTimestamp().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy"));
-        model.addAttribute("lastUpdate", lastUpdate);
-
         return "index";
     }
 
@@ -84,8 +82,11 @@ public class WeatherController {
     public ResponseEntity<PredictionResponse> predictRainfall(
             @RequestParam Long locationId,
             @RequestBody PredictionRequest request) {
-        log.info("Nhận request dự báo cho Location ID: {}", locationId);
-        PredictionResponse response = weatherService.predictAndSave(locationId, request);
+
+        // Người dùng test trên web -> saveToDb = false (KHÔNG LƯU)
+        // Để tránh làm bẩn dữ liệu trên bản đồ
+        PredictionResponse response = weatherService.predictRainfall(locationId, request, false);
+
         return ResponseEntity.ok(response);
     }
 
@@ -111,5 +112,41 @@ public class WeatherController {
             log.error("Lỗi dự báo tương lai: ", e);
             return ResponseEntity.badRequest().build();
         }
+    }
+    // 3. TRANG CHI TIẾT (DETAIL PAGE)
+    // ==========================================
+    // [THAY THẾ HOẶC THÊM VÀO WeatherController.java]
+    @GetMapping("/forecast/details")
+    public String showDetailsPage(@RequestParam Long locationId, Model model) {
+        // 1. Lấy thông tin chi tiết (Nhiệt độ, độ ẩm, gió hiện tại + Mưa dự báo hôm nay)
+        var locationDetail = weatherService.getMapLocationDetail(locationId);
+        model.addAttribute("detail", locationDetail);
+
+        // 2. Lấy dữ liệu dự báo 5 ngày tới (Cho biểu đồ)
+        List<PredictionResponse> forecast5Days = weatherService.getMultiDayForecast(locationId);
+        model.addAttribute("forecastList", forecast5Days);
+
+        // 3. LOGIC CHỌN ẢNH NỀN HERO (Mapping tên tỉnh -> tên file ảnh)
+        String imgName = "default_rain.jpg"; // Ảnh mặc định phòng hờ
+        String name = locationDetail.getName();
+
+        if (name.contains("Thanh Hóa")) imgName = "samson.jpg";
+        else if (name.contains("Nghệ An")) imgName = "quebac.jpg";
+        else if (name.contains("Hà Tĩnh")) imgName = "hatinh.jpg";
+        else if (name.contains("Quảng Trị")) imgName = "thanhco.jpg";
+        else if (name.contains("Huế") || name.contains("Thừa Thiên")) imgName = "hue.jpg";
+        else if (name.contains("Đà Nẵng")) imgName = "cauvang.jpg";
+        else if (name.contains("Quảng Ngãi")) imgName = "lyson.jpg";
+        else if (name.contains("Gia Lai")) imgName = "bienho.jpg";
+        else if (name.contains("Đắk Lắk")) imgName = "buondon.jpg";
+        else if (name.contains("Khánh Hòa")) imgName = "nhatrang.jpg";
+        else if (name.contains("Lâm Đồng")) imgName = "dalat.jpg";
+            // Các tỉnh khác nếu có...
+        else if (name.contains("Bình Định")) imgName = "quynhon.jpg";
+        else if (name.contains("Phú Yên")) imgName = "ghenhdadia.jpg";
+
+        model.addAttribute("bgImage", imgName);
+
+        return "details";
     }
 }
